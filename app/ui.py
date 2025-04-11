@@ -107,8 +107,8 @@ class UI(ctk.CTkFrame):
     # Pick the log file
     def __pick_file(self):
         file_path = filedialog.askopenfilename(filetypes=[("Log", "*.log")])
-        self.__log_report_placeholder.grid_remove()
         if file_path:
+            self.__log_report_placeholder.grid_remove()
             # Get file name
             file_name = os.path.basename(file_path)
             self.__file_label.configure(text=f"You’ve selected:   '{file_name}'")
