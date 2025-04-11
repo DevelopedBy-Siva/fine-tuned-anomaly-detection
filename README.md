@@ -31,3 +31,11 @@ pip install -r requirements.txt
 ```bash
 python app/main.py
 ```
+
+---
+
+### App UI
+
+![UI](./images/app_1.png)
+
+![UI](./images/app_2.png)

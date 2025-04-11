@@ -12,7 +12,7 @@ def main():
     root.config(background=utils.BG_COLOR)
 
     _ = UI(root)  # Init the UI
-    _.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+    _.grid(row=0, column=0, sticky="nsew", padx=40, pady=(30, 30))
 
     root.grid_columnconfigure(0, weight=1)
     root.grid_rowconfigure(0, weight=1)
