@@ -9,6 +9,7 @@ def main():
     root = ctk.CTk()
     root.title(utils.APP_NAME)
     root.minsize(width=utils.WIDTH, height=utils.HEIGHT)
+    root.resizable(False, False)  # don't allow resize
     root.config(background=utils.BG_COLOR)
 
     _ = UI(root)  # Init the UI

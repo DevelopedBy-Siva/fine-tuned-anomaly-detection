@@ -3,6 +3,9 @@ import customtkinter as ctk
 from tkinter import filedialog
 
 import utils
+from anomaly_detector import AnomalyDetector
+
+PLACEHOLDER = "Please select a log file to view the result."
 
 
 class UI(ctk.CTkFrame):
@@ -57,7 +60,7 @@ class UI(ctk.CTkFrame):
 
         self.__log_report_placeholder = ctk.CTkLabel(
             frame_top,
-            text="Please select a log file to view the result.",
+            text=PLACEHOLDER,
             text_color=utils.COLOR_LIGHT,
         )
 
@@ -66,9 +69,7 @@ class UI(ctk.CTkFrame):
         )
 
         # Display log analysis report
-        self.__log_report = ctk.CTkTextbox(
-            frame_top, fg_color=utils.BG_COLOR, text_color=utils.COLOR_LIGHT
-        )
+        self.__log_report = ctk.CTkScrollableFrame(frame_top, fg_color=utils.BG_COLOR)
         self.__log_report.grid(row=0, column=0, sticky="nsew", pady=5, padx=5)
         self.__log_report.grid_remove()
 
@@ -107,25 +108,53 @@ class UI(ctk.CTkFrame):
     # Pick the log file
     def __pick_file(self):
         file_path = filedialog.askopenfilename(filetypes=[("Log", "*.log")])
-        if file_path:
-            self.__log_report_placeholder.grid_remove()
+        if not file_path:
+            return
+        try:
+            # reset when new file is selected
+            self.__reset(placeholder_txt="📖 Reading log file....")
+            self.__root.update_idletasks()
+
             # Get file name
             file_name = os.path.basename(file_path)
             self.__file_label.configure(text=f"You’ve selected:   '{file_name}'")
             self.__log_report.grid()
 
             with open(file_path, "r") as f:
-                for idx, entry in enumerate(f):
-                    self.log_data.append(entry)
-                    self.__log_report.insert("end", f"{idx+1}.     {entry.strip()}\n\n")
+                self.log_data = f.readlines()
 
-            # Result
-            log_entries = len(self.log_data)
-            # TODO: Retrieve data from the model
-            anomaly_count = 150
-            model_confidence = 93
+            self.__log_report_placeholder.configure(text="🧠 Looking for anomalies...")
+            self.__root.update_idletasks()
 
-            self.__log_entires_count.configure(text=f"Log Entries:   {log_entries}")
+            anomaly_detector = AnomalyDetector(self.log_data)
+            log_count, anomaly_count, model_confidence, flagged_logs = (
+                anomaly_detector.detect()
+            )
+
+            for idx, entry in enumerate(flagged_logs):
+
+                each_log_index = ctk.CTkLabel(
+                    self.__log_report,
+                    text=f"{idx + 1}.",
+                    anchor="nw",
+                    text_color=utils.COLOR_DULL,
+                    justify="left",
+                )
+                each_log_index.grid(
+                    row=idx, column=0, sticky="w", padx=(5, 10), pady=15
+                )
+
+                each_log_txt = ctk.CTkLabel(
+                    self.__log_report,
+                    text=f"{entry.strip()}",
+                    anchor="nw",
+                    text_color=utils.COLOR_LIGHT,
+                    wraplength=860,
+                    justify="left",
+                )
+                each_log_txt.grid(row=idx, column=1, sticky="w", padx=5, pady=2)
+
+            self.__log_entires_count.configure(text=f"Log Entries:   {log_count}")
             self.__anomaly_count.configure(
                 text=f"Anomalies Detected:   {anomaly_count}", text_color="#e50000"
             )
@@ -136,19 +165,29 @@ class UI(ctk.CTkFrame):
 
             # show header
             self.__frame_header.grid()
+        except:
+            # reset if something goes wrong in rendering a UI
+            self.__reset(placeholder_txt="⚠️ Something went wrong.")
 
-            # Textbox disabled
-            self.__log_report.configure(state="disabled")
         # Focus back to window
         self.__root.focus_force()
 
     # Reset the app
-    def __reset(self):
+    def __reset(self, placeholder_txt=PLACEHOLDER):
         self.log_data = []
+
+        for widget in self.__log_report.winfo_children():
+            widget.destroy()
+
         self.__file_label.configure(text="")
         self.__log_entires_count.configure(text="")
         self.__anomaly_count.configure(text="")
         self.__model_confidence.configure(text="")
+
         self.__frame_header.grid_remove()
-        self.__log_report.grid_remove()
+
+        self.__log_report_placeholder.configure(text=placeholder_txt)
         self.__log_report_placeholder.grid()
+        self.__log_report.grid_remove()
+
+        self.__root.update_idletasks()
