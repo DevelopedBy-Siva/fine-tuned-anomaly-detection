@@ -4,12 +4,6 @@ Fine-tuned LLMs to classify logs as 'normal' or 'anomalous' without relying on p
 
 ---
 
-## 🚧 Major Changes
-
-Major improvements are being done within `devel` branch. These changes will be merged into `master` soon.  
-
----
-
 ### Dev Environment:
 
 - Python 3.12.7
