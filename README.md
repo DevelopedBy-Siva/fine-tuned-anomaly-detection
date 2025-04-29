@@ -4,6 +4,16 @@ Fine-tuned LLMs to classify logs as 'normal' or 'anomalous' without relying on p
 
 ---
 
+### Tasks Tracking:
+
+- Fine Tune LLM for Classification ✅
+- Fine Tune LLM for Reasoning ✅
+- Develop UI ✅
+- Integrate Model with UI ❌
+- Replace TinyLLama with latest LLMs ❌
+
+---
+
 ### Dev Environment:
 
 - Python 3.12.7
