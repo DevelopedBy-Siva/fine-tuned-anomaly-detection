@@ -9,6 +9,7 @@ Fine-tuned LLMs to classify logs as 'normal' or 'anomalous' without relying on p
 - Fine Tune LLM for Classification ✅
 - Fine Tune LLM for Reasoning ✅
 - Develop UI ✅
+- Inference Pipeline ✅
 - Integrate Model with UI ❌
 - Replace TinyLLama with latest LLMs ❌
 
