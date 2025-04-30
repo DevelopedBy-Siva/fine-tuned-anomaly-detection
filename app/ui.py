@@ -214,7 +214,7 @@ class UI(ctk.CTkFrame):
                 text_color=utils.BG_ANOMALY_CLR,
             )
             self.__model_confidence.configure(
-                text=f"Model Confidence:   {model_confidence}%",
+                text=f"Model Confidence:   {model_confidence}",
             )
 
             # show header
