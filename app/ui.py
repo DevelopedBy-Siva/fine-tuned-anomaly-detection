@@ -135,15 +135,14 @@ class UI(ctk.CTkFrame):
 
             for idx, entry in enumerate(flagged_logs):
 
-                log_sequence = entry["Sequence"]
-                anomaly_explanation = entry["Explanation"]
+                log_sequence, raw, anomaly_explanation, _ = entry
 
                 bg_color = "transparent"
                 text_color = utils.COLOR_LIGHT
                 idx_color = utils.COLOR_DULL
 
                 is_anomaly = False
-                if not isinstance(anomaly_explanation, float):
+                if anomaly_explanation:
                     bg_color = utils.BG_ANOMALY_CLR
                     text_color = utils.TXT_ANOMALY_CLR
                     idx_color = utils.TXT_ANOMALY_CLR
@@ -199,7 +198,7 @@ class UI(ctk.CTkFrame):
 
                 each_log_txt = ctk.CTkLabel(
                     master=log_frame,
-                    text=log_sequence,
+                    text=raw,
                     anchor="nw",
                     text_color=text_color,
                     wraplength=830,
