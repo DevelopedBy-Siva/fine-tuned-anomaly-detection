@@ -80,9 +80,9 @@ class AnomalyDetector:
     def detect(self):
         """
         Returns:
-            int: log sequence count,
+            int: count of log sequences,
             int: anomaly count,
-            int: model confidence,
+            float: model confidence,
             list: all logs sequences
         """
         self.raw_sequences = [seq["raw_sequence"] for seq in self.log_sequences]
@@ -90,10 +90,21 @@ class AnomalyDetector:
             seq["processed_sequence"] for seq in self.log_sequences
         ]
 
+        assert len(self.raw_sequences) == len(
+            self.processed_sequences
+        ), "Raw and processed sequences misaligned"
+
         # define tokenizer
-        tokenizer = AutoTokenizer.from_pretrained(CLASSIFICATION_MODEL_LOCATION)
+        tokenizer = AutoTokenizer.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v1.0")
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
+            tokenizer.padding_side = "right"
+        if tokenizer.pad_token_id is None:
+            tokenizer.pad_token_id = tokenizer.convert_tokens_to_ids(
+                tokenizer.pad_token
+            )
+
         encodings = self.__tokenize_sequences(self.processed_sequences, tokenizer)
-        # create dataset
         dataset = LogDataset(encodings, [0] * len(self.processed_sequences))
         loader = DataLoader(dataset, batch_size=8, shuffle=False)
 
@@ -120,6 +131,7 @@ class AnomalyDetector:
         reasoning_model = PeftModel.from_pretrained(
             reasoning_model, REASONING_MODEL_LOCATION
         )
+        reasoning_model.config.pad_token_id = tokenizer.pad_token_id
         reasoning_model.to(device)
         reasoning_model.eval()
 
@@ -131,13 +143,16 @@ class AnomalyDetector:
                 input_ids = batch["input_ids"].to(device)
                 attention_mask = batch["attention_mask"].to(device)
                 outputs = classification_model(input_ids, attention_mask=attention_mask)
+                logits = outputs.logits[:, 1]
+                preds = (logits > 0.1039).cpu().numpy().astype(int)
                 probs = torch.nn.functional.softmax(outputs.logits, dim=1)
-                preds = (probs[:, 1] > 0.1039).cpu().numpy().astype(int)
-                confidences = probs[:, 1].cpu().numpy()
+                confidences = (
+                    probs[torch.arange(probs.size(0)), preds].cpu().numpy() * 100
+                )
                 predictions.extend(preds)
                 all_confidences.extend(confidences)
 
-        # generate anomaly reason
+        # Generate anomaly reason
         max_new_tokens = 20
         anomalous_sequences = []
         output = []
@@ -156,12 +171,10 @@ class AnomalyDetector:
                 explanation = tokenizer.decode(outputs[0], skip_special_tokens=True)[
                     len(prompt) :
                 ].strip()
-                anomalous_sequences.append(
-                    (seq, explanation, self.raw_sequences[i])
-                )  # store anomalies
-            output.append(
-                (seq, self.raw_sequences[i], explanation, pred)
-            )  # normal and anomaly data
-        avg_confidence = float(np.mean(all_confidences))
-        avg_confidence = f"{avg_confidence * 100:.2f}%"
+                anomalous_sequences.append((seq, explanation, self.raw_sequences[i]))
+            output.append((seq, self.raw_sequences[i], explanation, pred))
+
+        # calculate confidence
+        avg_confidence = float(np.mean(all_confidences)) if all_confidences else 0.0
+
         return len(output), len(anomalous_sequences), avg_confidence, output
