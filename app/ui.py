@@ -130,42 +130,98 @@ class UI(ctk.CTkFrame):
             log_count, anomaly_count, model_confidence, flagged_logs = (
                 anomaly_detector.detect()
             )
+            if len(flagged_logs) < 1:
+                raise ValueError("No sequences found...")
 
             for idx, entry in enumerate(flagged_logs):
 
+                log_sequence = entry["Sequence"]
+                anomaly_explanation = entry["Explanation"]
+
+                bg_color = "transparent"
+                text_color = utils.COLOR_LIGHT
+                idx_color = utils.COLOR_DULL
+
+                is_anomaly = False
+                if not isinstance(anomaly_explanation, float):
+                    bg_color = utils.BG_ANOMALY_CLR
+                    text_color = utils.TXT_ANOMALY_CLR
+                    idx_color = utils.TXT_ANOMALY_CLR
+                    is_anomaly = True
+
+                log_frame = ctk.CTkFrame(
+                    master=self.__log_report,
+                    fg_color=bg_color,
+                    corner_radius=10,
+                )
+                log_frame.grid(
+                    row=idx, columnspan=2, column=0, sticky="we", padx=10, pady=8
+                )
+
+                if is_anomaly:
+                    reason_frame = ctk.CTkFrame(
+                        master=log_frame,
+                        fg_color=bg_color,
+                    )
+                    reason_frame.grid(row=1, column=1, sticky="ew", pady=20)
+
+                    each_log_explanation_label = ctk.CTkLabel(
+                        master=reason_frame,
+                        text=f"➜ Reason:    ",
+                        text_color="#191919",
+                        anchor="n",
+                        justify="left",
+                        font=(utils.FONT_FAMILY, 15, "bold"),
+                    )
+                    each_log_explanation_label.grid(row=0, column=0, sticky="nw")
+
+                    # log explanation
+                    each_log_explanation = ctk.CTkLabel(
+                        master=reason_frame,
+                        wraplength=740,
+                        text=f"{anomaly_explanation}",
+                        text_color="#323232",
+                        anchor="n",
+                        justify="left",
+                        font=(utils.FONT_FAMILY, 15),
+                    )
+                    each_log_explanation.grid(row=0, column=1, sticky="nw")
+
                 each_log_index = ctk.CTkLabel(
-                    self.__log_report,
+                    master=log_frame,
                     text=f"{idx + 1}.",
-                    anchor="nw",
-                    text_color=utils.COLOR_DULL,
+                    anchor="n",
+                    text_color=idx_color,
                     justify="left",
+                    bg_color="transparent",
                 )
-                each_log_index.grid(
-                    row=idx, column=0, sticky="w", padx=(5, 10), pady=15
-                )
+                each_log_index.grid(row=0, column=0, sticky="w", padx=(10, 20), pady=20)
 
                 each_log_txt = ctk.CTkLabel(
-                    self.__log_report,
-                    text=f"{entry.strip()}",
+                    master=log_frame,
+                    text=log_sequence,
                     anchor="nw",
-                    text_color=utils.COLOR_LIGHT,
-                    wraplength=860,
+                    text_color=text_color,
+                    wraplength=830,
                     justify="left",
+                    bg_color="transparent",
                 )
-                each_log_txt.grid(row=idx, column=1, sticky="w", padx=5, pady=2)
+                each_log_txt.grid(row=0, column=1, sticky="ew", padx=5, pady=20)
+                log_frame.grid_columnconfigure(1, weight=1)
 
-            self.__log_entires_count.configure(text=f"Log Entries:   {log_count}")
+            self.__log_entires_count.configure(text=f"Log Sequences:   {log_count}")
             self.__anomaly_count.configure(
-                text=f"Anomalies Detected:   {anomaly_count}", text_color="#e50000"
+                text=f"Anomalies Detected:   {anomaly_count}",
+                text_color=utils.BG_ANOMALY_CLR,
             )
             self.__model_confidence.configure(
                 text=f"Model Confidence:   {model_confidence}%",
-                text_color="#80B800" if model_confidence >= 80 else "#F79C0E",
             )
 
             # show header
             self.__frame_header.grid()
-        except:
+        except Exception as e:
+            print(e)
             # reset if something goes wrong in rendering a UI
             self.__reset(placeholder_txt="⚠️ Something went wrong.")
 

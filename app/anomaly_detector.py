@@ -1,3 +1,11 @@
+import os
+import pandas as pd
+
+base_dir = os.path.dirname(os.path.abspath(__file__))
+output_file = os.path.join(base_dir, "../notebook/data/output.csv")
+output_file = os.path.normpath(output_file)
+
+
 class AnomalyDetector:
     def __init__(self, logs):
         self.logs = logs
@@ -10,4 +18,7 @@ class AnomalyDetector:
             int: model confidence,
             list: all logs sequences
         """
-        return len(self.logs), 150, 93, self.logs
+        df = pd.read_csv(output_file)
+        anomaly_count = df["Explanation"].notna().sum()
+        sequences = df.to_dict(orient="records")
+        return len(df), anomaly_count, 93, sequences
