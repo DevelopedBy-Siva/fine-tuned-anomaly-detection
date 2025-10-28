@@ -1,0 +1,13 @@
+2025-10-28 10:00:00 INFO Starting background job scheduler
+2025-10-28 10:00:02 INFO Connecting to database
+2025-10-28 10:00:03 INFO Connection established
+2025-10-28 10:05:01 INFO Processing batch ID=1234
+2025-10-28 10:05:02 INFO Processing batch ID=1235
+2025-10-28 10:05:03 WARNING Slow query detected: SELECT * FROM users
+2025-10-28 10:05:04 INFO Batch 1235 completed
+2025-10-28 10:05:05 INFO Disconnecting from database
+2025-10-28 10:05:06 ERROR Failed to connect to DB: timeout expired
+2025-10-28 10:05:07 ERROR ConnectionPool timeout while acquiring new connection
+2025-10-28 10:05:08 CRITICAL Application halted due to repeated connection failures
+2025-10-28 10:05:09 INFO Retrying connection...
+2025-10-28 10:05:10 INFO Reconnected successfully
