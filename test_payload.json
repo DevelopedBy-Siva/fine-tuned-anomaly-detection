@@ -1,0 +1,21 @@
+{
+  "logs": [
+    "2025-10-29 09:00:00 INFO Starting application server...",
+    "2025-10-29 09:00:02 INFO Initializing database connection pool",
+    "2025-10-29 09:00:03 INFO Successfully connected to database",
+    "2025-10-29 09:05:15 WARNING Slow response detected for endpoint /api/user/profile (1200ms)",
+    "2025-10-29 09:06:01 INFO Cache miss: user_session_32421",
+    "2025-10-29 09:06:04 INFO Cache rebuild completed",
+    "2025-10-29 09:07:10 ERROR Failed to connect to DB: timeout expired after 30s",
+    "2025-10-29 09:07:11 ERROR ConnectionPool timeout while acquiring new connection",
+    "2025-10-29 09:07:12 CRITICAL Application halted due to repeated connection failures",
+    "2025-10-29 09:08:00 INFO Restarting background scheduler",
+    "2025-10-29 09:10:25 WARNING Disk usage exceeded 85% on /dev/sda1",
+    "2025-10-29 09:11:05 INFO Cleanup job started",
+    "2025-10-29 09:11:30 ERROR Permission denied while writing to log directory /var/logs/app",
+    "2025-10-29 09:12:00 INFO Cleanup job completed",
+    "2025-10-29 09:13:45 INFO Application running normally",
+    "2025-10-29 09:14:00 WARNING API rate limit threshold reached for external service payment_gateway",
+    "2025-10-29 09:15:00 INFO Automatic rate-limiter adjusted configuration"
+  ]
+}
