@@ -2,57 +2,88 @@ from drain3 import TemplateMiner
 from drain3.file_persistence import FilePersistence
 from sklearn.ensemble import IsolationForest
 import pandas as pd
-from explain import explain_log_with_context
-
+from typing import List, Dict
 
 persistence = FilePersistence("drain3_state.bin")
 template_miner = TemplateMiner(persistence)
 
 
-def extract_log_features(log_lines):
-    if not log_lines:
-        return pd.DataFrame(columns=["template_id"])
-
-    templates = []
+def extract_log_templates(log_lines: List[str]) -> List[Dict]:
+    """
+    For each line, return { "line": str, "template_id": "...", "severity": "INFO"/"ERROR"/... }
+    """
+    results = []
     for line in log_lines:
-        result = template_miner.add_log_message(line)
-        cluster_id = result.get("cluster_id", -1) if isinstance(result, dict) else -1
-        templates.append(cluster_id)
-    df = pd.DataFrame(templates, columns=["template_id"])
-    return df
+        parsed = template_miner.add_log_message(line)
+        template_id = (
+            parsed.get("cluster_id", "unknown")
+            if isinstance(parsed, dict)
+            else "unknown"
+        )
+
+        if "CRITICAL" in line:
+            sev = "CRITICAL"
+        elif "ERROR" in line:
+            sev = "ERROR"
+        elif "WARNING" in line:
+            sev = "WARNING"
+        else:
+            sev = "INFO"
+
+        results.append({"line": line, "template_id": template_id, "severity": sev})
+    return results
 
 
-def detect_anomalies(log_lines):
-    critical = [l for l in log_lines if "CRITICAL" in l]
-    errors = [l for l in log_lines if "ERROR" in l]
-    warnings = [l for l in log_lines if "WARNING" in l]
+def detect_anomalies(log_lines: List[str]) -> List[Dict]:
+    """
+    Return list of anomaly dicts:
+    {
+      "index": int,
+      "log_line": str,
+      "template_id": str,
+      "severity": str
+    }
+    """
+    annotated = extract_log_templates(log_lines)
 
-    anomalies = critical + errors
+    anomalies = [
+        {
+            "index": i,
+            "log_line": row["line"],
+            "template_id": row["template_id"],
+            "severity": row["severity"],
+        }
+        for i, row in enumerate(annotated)
+        if row["severity"] in ["CRITICAL", "ERROR"]
+    ]
 
-    if len(warnings) >= 3:
-        df = extract_log_features(warnings)
+    warning_rows = [
+        (i, row) for i, row in enumerate(annotated) if row["severity"] == "WARNING"
+    ]
 
-        if not df.empty:
-            model = IsolationForest(contamination=0.2, random_state=42)
-            model.fit(df)
-            preds = model.predict(df)
-            anomalies += [warnings[i] for i in range(len(preds)) if preds[i] == -1]
+    if len(warning_rows) >= 3:
+        df = pd.DataFrame(
+            [row["template_id"] for (_, row) in warning_rows], columns=["template_id"]
+        )
 
-    if not anomalies:
-        anomalies = [l for l in log_lines if "ERROR" in l or "CRITICAL" in l]
+        model = IsolationForest(contamination=0.2, random_state=42)
+        model.fit(df)
+        preds = model.predict(df)
 
-    return anomalies
+        for pred_idx, (i, row) in enumerate(warning_rows):
+            if preds[pred_idx] == -1:
+                anomalies.append(
+                    {
+                        "index": i,
+                        "log_line": row["line"],
+                        "template_id": row["template_id"],
+                        "severity": row["severity"],
+                    }
+                )
 
+    dedup = {}
+    for a in anomalies:
+        dedup[a["index"]] = a
+    final_list = [dedup[k] for k in sorted(dedup.keys())]
 
-if __name__ == "__main__":
-    logs = open("sample_logs.txt").read().splitlines()
-    anomalies = detect_anomalies(logs)
-
-    print("Detected Anomalies:\n")
-    if not anomalies:
-        print("No anomalies found...")
-    else:
-        for i, log in enumerate(logs):
-            if log in anomalies:
-                explanation = explain_log_with_context(logs, i)
-                print(f"{log}\n{explanation}\n")
+    return final_list

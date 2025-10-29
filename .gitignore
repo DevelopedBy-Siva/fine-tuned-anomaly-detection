@@ -215,5 +215,5 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-incident.json
+incidents.json
 drain3_state.bin
