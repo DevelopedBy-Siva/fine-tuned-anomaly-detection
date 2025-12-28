@@ -25,7 +25,8 @@ logger = logging.getLogger(__name__)
 
 
 class Config:
-    MODEL_DIR = Path("../ml/models")
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    MODEL_DIR = BASE_DIR / "ml" / "models"
     CLASSIFIER_PATH = MODEL_DIR / "classifier" / "final"
     REASONING_PATH = MODEL_DIR / "reasoning" / "final"
 
@@ -41,8 +42,15 @@ class Config:
 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
+    def __post_init__(self):
+        self.MODEL_DIR.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Using device: {self.DEVICE}")
+        logger.info(f"Classifier path: {self.CLASSIFIER_PATH}")
+        logger.info(f"Reasoning path: {self.REASONING_PATH}")
+
 
 config = Config()
+config.__post_init__()
 
 
 class AnomalyResult(BaseModel):
@@ -86,8 +94,9 @@ class ModelManager:
         try:
             logger.info("Loading classifier model...")
 
+            clf_path = str(config.CLASSIFIER_PATH.resolve())
             self.classifier_tokenizer = AutoTokenizer.from_pretrained(
-                str(config.CLASSIFIER_PATH)
+                clf_path, local_files_only=True
             )
 
             base_classifier = AutoModelForSequenceClassification.from_pretrained(
@@ -95,7 +104,7 @@ class ModelManager:
             )
 
             self.classifier = PeftModel.from_pretrained(
-                base_classifier, str(config.CLASSIFIER_PATH)
+                base_classifier, clf_path, local_files_only=True
             )
             self.classifier.to(self.device)
             self.classifier.eval()
@@ -104,8 +113,9 @@ class ModelManager:
 
             logger.info("Loading reasoning model...")
 
+            reasoning_path = str(config.REASONING_PATH.resolve())
             self.reasoning_tokenizer = AutoTokenizer.from_pretrained(
-                str(config.REASONING_PATH)
+                reasoning_path, local_files_only=True
             )
 
             base_reasoning = AutoModelForSeq2SeqLM.from_pretrained(
@@ -113,13 +123,12 @@ class ModelManager:
             )
 
             self.reasoning = PeftModel.from_pretrained(
-                base_reasoning, str(config.REASONING_PATH)
+                base_reasoning, reasoning_path, local_files_only=True
             )
             self.reasoning.to(self.device)
             self.reasoning.eval()
 
             logger.info("Reasoning model loaded successfully")
-
             return True
 
         except Exception as e:
