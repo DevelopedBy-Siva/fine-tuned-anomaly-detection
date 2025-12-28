@@ -1,54 +1,35 @@
-name: CI/CD Pipeline
+name: Build & Push to ECR
 
 on:
     push:
         branches: [main]
-    pull_request:
-        branches: [main]
 
 env:
-    REGISTRY: ghcr.io
-
-permissions:
-    contents: read
-    packages: write
+    AWS_REGION: us-east-1
+    ECR_REPOSITORY: fine-tuned-anomaly-detection
 
 jobs:
     build:
-        name: Build & Push Docker image
         runs-on: ubuntu-latest
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
         steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+            - uses: actions/checkout@v4
 
-            - name: Set up Docker Buildx
-              uses: docker/setup-buildx-action@v3
-
-            - name: Determine image tags (lowercase)
-              id: tags
-              run: |
-                  REPO_LOWER=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
-                  SHORT_SHA=${GITHUB_SHA::7}
-                  IMAGE="${REGISTRY}/${REPO_LOWER}:${SHORT_SHA}"
-                  LATEST="${REGISTRY}/${REPO_LOWER}:latest"
-                  echo "image=${IMAGE}" >> $GITHUB_OUTPUT
-                  echo "latest_tag=${LATEST}" >> $GITHUB_OUTPUT
-
-            - name: Login to GHCR
-              uses: docker/login-action@v3
+            - uses: aws-actions/configure-aws-credentials@v4
               with:
-                  registry: ${{ env.REGISTRY }}
-                  username: ${{ github.actor }}
-                  password: ${{ secrets.GITHUB_TOKEN }}
+                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                  aws-region: ${{ env.AWS_REGION }}
+
+            - name: Login to ECR
+              run: |
+                  aws ecr get-login-password --region $AWS_REGION \
+                    | docker login --username AWS --password-stdin \
+                      586964278361.dkr.ecr.$AWS_REGION.amazonaws.com
 
             - name: Build and push
-              uses: docker/build-push-action@v5
-              with:
-                  context: .
-                  push: true
-                  tags: |
-                      ${{ steps.tags.outputs.image }}
-                      ${{ steps.tags.outputs.latest_tag }}
-                  platforms: linux/amd64
+              run: |
+                  SHORT_SHA=${GITHUB_SHA::7}
+                  IMAGE=586964278361.dkr.ecr.$AWS_REGION.amazonaws.com/fine-tuned-anomaly-detection:$SHORT_SHA
+                  docker build -t $IMAGE .
+                  docker push $IMAGE
