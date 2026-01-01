@@ -1,138 +1,356 @@
-# LogAnomaly
+# Log Anomaly Detection System
 
-An intelligent log analysis system that uses fine-tuned Large Language Models (LLMs) to detect anomalies in system logs and generate human-readable explanations for detected issues.
+A system for detecting anomalies in distributed system logs using fine-tuned transformer models with explainable AI.
+
+![UI](./images/app.jpeg)
 
 ## Overview
 
-LogAnomaly leverages fine-tuned TinyLlama models with LoRA (Low-Rank Adaptation) to analyze log sequences from the BlueGene/L supercomputer system. The system employs two specialized models: a classification model for anomaly detection and a reasoning model for generating explanations. Using Drain3 for log parsing and sliding window sequence generation, the application provides real-time analysis through an intuitive desktop interface built with CustomTkinter.
+This project implements an intelligent anomaly detection system for analyzing log files from distributed systems (HDFS). Unlike traditional rule-based approaches, it uses **dual transformer models** to not only detect anomalies but also provide human-readable explanations for each detection.
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐
+│   React UI      │  ← User uploads log file
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  FastAPI Server │  ← REST API endpoint
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────────────────────┐
+│         Log Preprocessing               │
+│  • Parse log format                     │
+│  • Create sliding windows               │
+│  • Batch sequences                      │
+└────────┬────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────┐
+│      DeBERTa Classifier (Model 1)       │
+│  • Binary classification                │
+└────────┬────────────────────────────────┘
+         │
+         ▼
+    Anomaly?
+         │
+    ┌────┴────┐
+    │   Yes   │
+    └────┬────┘
+         │
+         ▼
+┌─────────────────────────────────────────┐
+│      FLAN-T5 Explainer (Model 2)        │
+│  • Generate natural language            │
+│  • Explain WHY it's anomalous           │
+│  • Context-aware reasoning              │
+└────────┬────────────────────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│   JSON Response │  ← Anomalies + explanations
+└─────────────────┘
+```
+
+### Why Dual Models?
+
+**DeBERTa (Classifier)**
+
+- Fast binary classification: anomaly vs. normal
+- 99.9% precision on training data
+- Optimized for speed with LoRA
+
+**FLAN-T5 (Explainer)**
+
+- Generates human-readable explanations
+- Only runs on detected anomalies
+- Provides actionable insights for operators
 
 ## Features
 
-- **Dual-Model Architecture** – Classification model for anomaly detection and reasoning model for explanation generation
-- **Fine-Tuned LLM Classification** – TinyLlama model fine-tuned with LoRA for binary log sequence classification (Normal/Anomalous)
-- **Intelligent Log Parsing** – Drain3 template mining for preprocessing raw logs and extracting patterns
-- **Sliding Window Analysis** – Sequences logs using configurable window size and stride for context-aware detection
-- **Explainable AI** – Generates natural language explanations for detected anomalies using causal language modeling
-- **Desktop GUI Application** – CustomTkinter interface for importing log files and viewing analysis results
-- **High Accuracy** – Achieves F1 score of 0.97+ with 94% precision and 100% recall on test data
-- **Optimized Threshold Tuning** – Dynamic threshold adjustment based on precision-recall curves
-- **Visual Analytics** – Color-coded anomaly highlighting with detailed reasoning display
-- **Real-Time Processing** – Analyzes log files on-demand with progress indicators
+### Functionality
 
-## Tech Stack
+- **Automated anomaly detection** in HDFS logs
+- **Explainable AI** - Natural language explanations for each anomaly
+- **Batch processing** - Efficient handling of large log files (10K+ lines)
+- **Severity classification** - High/Medium/Low risk levels
 
-- **Backend:** Python
-- **Machine Learning:** PyTorch, Transformers, PEFT (LoRA)
-- **Models:** TinyLlama-1.1B-Chat (fine-tuned)
-- **NLP:** Drain3 (log parsing), Tokenization
-- **Data Processing:** Pandas, NumPy
-- **Evaluation:** Scikit-learn, Seaborn, Matplotlib
-- **GUI:** CustomTkinter
-- **Dataset:** BlueGene/L Supercomputer Logs
+### Technical Features
 
-## Installation
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/log-anomaly.git
-cd log-anomaly
-
-# Install dependencies
-pip install torch transformers peft datasets pandas numpy scikit-learn \
-            drain3 customtkinter seaborn matplotlib
-
-# Run the application
-python main.py
-```
-
-## Project Structure
-```
-log-anomaly/
-├── app/
-│   ├── anomaly_detector.py     # Core anomaly detection logic
-│   ├── ui.py                   # CustomTkinter GUI implementation
-│   └── utils.py                # UI constants and utilities
-├── notebook/
-│   ├── model/
-│   │   ├── classifier/         # Fine-tuned classification model
-│   │   └── reasoning/          # Fine-tuned reasoning model
-│   └── training_notebook.ipynb # Model training workflow
-├── data/
-│   ├── BGL_train.csv          # Training dataset
-│   ├── test.log               # Test log file
-│   └── anomaly_explanation.csv # Synthetic reasoning dataset
-├── main.py                     # Application entry point
-└── README.md
-```
-
-## How It Works
-
-1. **Log Preprocessing** – Drain3 parses raw logs to extract templates and normalize dynamic fields
-2. **Sequence Generation** – Sliding window (size=10, stride=3) creates overlapping log sequences
-3. **Tokenization** – TinyLlama tokenizer converts sequences to model-ready input tensors
-4. **Anomaly Classification** – Fine-tuned LoRA model predicts anomaly probability with optimized threshold
-5. **Reasoning Generation** – Causal LM generates natural language explanations for detected anomalies
-6. **Visualization** – GUI displays results with color-coded highlighting and detailed reasoning
-
-## Model Architecture
-
-### Classification Model
-- **Base Model:** TinyLlama-1.1B-Chat-v1.0
-- **Task:** Sequence Classification (Binary)
-- **Fine-Tuning:** LoRA (r=32, alpha=64, dropout=0.1)
-- **Target Modules:** q_proj, v_proj, k_proj
-- **Training:** 10 epochs, AdamW optimizer, weighted cross-entropy loss
-- **Performance:** F1=0.97, Precision=0.94, Recall=1.0
-
-### Reasoning Model
-- **Base Model:** TinyLlama-1.1B-Chat-v1.0
-- **Task:** Causal Language Modeling
-- **Fine-Tuning:** LoRA (r=32, alpha=64, dropout=0.1)
-- **Training:** 10 epochs on synthetic reasoning dataset
-- **Output:** 20-50 token explanations for anomalies
-
-## Dataset
-
-- **Source:** BlueGene/L Supercomputer System Logs
-- **Training:** 2000 log entries (18.46% anomalous)
-- **Preprocessing:** Drain3 template extraction, sequence windowing
-- **Features:** Timestamp, Node ID, Log Level, Event Template, Content
-
-## Usage
-
-1. Launch the application with `python main.py`
-2. Click "Import File" to select a `.log` file
-3. Wait for analysis to complete (progress shown in UI)
-4. View results:
-   - **Header:** Total sequences, anomaly count, model confidence
-   - **Log Entries:** Normal logs in gray, anomalies highlighted in yellow
-   - **Reasoning:** Detailed explanations for each detected anomaly
-5. Click "Reset" to clear results and analyze a new file
-
-## Key Features in Detail
-
-- **Drain3 Template Mining** – Automatically identifies log patterns and normalizes variable fields
-- **Sliding Window Sequences** – Captures temporal context across 10 consecutive log entries
-- **LoRA Fine-Tuning** – Parameter-efficient training with only 0.59% trainable parameters
-- **Threshold Optimization** – Precision-recall curve analysis for optimal classification threshold
-- **Explainable Predictions** – Human-readable reasoning for every detected anomaly
-- **Confidence Metrics** – Model confidence scores displayed for transparency
+- **Automated CI/CD** - GitHub Actions → AWS ECR → EC2
+- **Docker containerization** - Consistent environments
+- **Comprehensive API** - RESTful endpoints with OpenAPI docs
+- **Interactive dashboard** - Real-time visualization
+- **Error handling** - Graceful failures with detailed messages
+- **Health monitoring** - Built-in health check endpoints
 
 ## Performance Metrics
 
-- **Classification F1 Score:** 0.9697
-- **Precision:** 0.9412
-- **Recall:** 1.0000
-- **Trainable Parameters:** 0.59% of total model (6.1M / 1.04B)
-- **Inference Speed:** Real-time analysis with batch processing
+Measured on NVIDIA A100 80GB GPU with 24GB RAM:
 
-## Future Enhancements
+| Metric              | Value     | Description                    |
+| ------------------- | --------- | ------------------------------ |
+| **P50 Latency**     | 90.3ms    | Median response time           |
+| **P95 Latency**     | 94.3ms    | 95th percentile                |
+| **P99 Latency**     | 100.7ms   | 99th percentile                |
+| **Throughput**      | 310 seq/s | Sequences processed per second |
+| **Model Precision** | 99.9%     | On HDFS training data          |
+| **F1 Score**        | 80.1%     | Balanced performance           |
 
-- Multi-class anomaly classification (error types)
-- Real-time log streaming and continuous monitoring
-- Integration with system monitoring tools
-- Anomaly severity scoring
-- Historical trend analysis and reporting
-- Support for additional log formats
-- TinyLlama team for the base model
-- BlueGene/L dataset contributors
-- Hugging Face Transformers and PEFT libraries
+## Tech Stack
+
+### Backend
+
+- **Framework**: FastAPI (Python 3.10)
+- **ML Libraries**: PyTorch, Transformers, PEFT (LoRA)
+- **Models**:
+  - microsoft/deberta-v3-base (classifier)
+  - google/flan-t5-base (explainer)
+
+### Frontend
+
+- **Framework**: React
+
+### Infrastructure
+
+- **Cloud**: AWS (EC2 m7i-flex.large)
+- **Container Registry**: AWS ECR
+- **CI/CD**: GitHub Actions
+- **Containerization**: Docker
+
+## Getting Started
+
+### Prerequisites
+
+```bash
+Python 3.10+
+Docker 20.10+
+CUDA 11.8+ (for GPU training)
+
+Node.js 18+
+Git
+AWS CLI
+```
+
+### Local Development Setup
+
+1. **Clone the repository**
+
+```bash
+git clone https://github.com/yourusername/log-anomaly-detection.git
+cd log-anomaly-detection
+```
+
+2. **Set up Python environment**
+
+```bash
+python -m venv loganomaly
+source loganomaly/bin/activate
+pip install -r backend/requirements.txt
+```
+
+3. **Download pre-trained models**
+
+```bash
+mkdir -p ml/models/classifier/final
+mkdir -p ml/models/reasoning/final
+```
+
+4. **Start the backend server**
+
+```bash
+cd backend
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+5. **Start the frontend**
+
+```bash
+cd ui
+npm install
+npm start
+```
+
+6. **Test the API**
+
+```bash
+curl http://localhost:8000/health
+```
+
+### Docker Deployment
+
+```bash
+docker build -t log-anomaly-detector .
+
+docker run -p 8000:8000 --gpus all log-anomaly-detector
+
+curl http://localhost:8000/health
+```
+
+## Model Training
+
+Training was performed on NVIDIA A100 80GB GPU:
+
+### Dataset
+
+- **Source**: HDFS logs from Hadoop Distributed File System
+- **Size**: 100,000+ log sequences
+- **Split**: 80% train, 20% validation
+- **Preprocessing**: Sliding window (size=10, stride=5)
+
+### Training Configuration
+
+```python
+Epochs: 10
+Batch Size: 32
+Learning Rate: 2e-5
+LoRA Rank: 16
+LoRA Alpha: 32
+
+Epochs: 8
+Batch Size: 32
+Learning Rate: 2e-5
+Max Length: 512
+```
+
+### Training Process
+
+```bash
+python ml/log_preprocessor.py
+
+python ml/train.py
+
+```
+
+### Training Results
+
+- **Training Time**: ~6 hours (classifier) + ~4 hours (reasoning)
+- **GPU Memory**: ~45GB peak usage
+- **Final Loss**: 0.06
+- **Best F1**: 80.1%
+
+## Deployment
+
+### AWS Architecture
+
+```
+GitHub → GitHub Actions → AWS ECR → AWS EC2
+```
+
+### CI/CD Pipeline
+
+The project uses GitHub Actions for automated deployment:
+
+1. **Trigger**: Push to `main` branch
+2. **Build**: Docker image with all dependencies
+3. **Test**: Run unit and integration tests
+4. **Push**: Upload to AWS ECR
+5. **Deploy**: Pull and run on EC2 instance
+
+**Image Size**: 4.3GB
+
+## API Documentation
+
+### Endpoints
+
+#### `GET /health`
+
+Health check endpoint
+
+```bash
+curl http://44.204.148.194:8000/health
+```
+
+**Response:**
+
+```json
+{
+  "status": "healthy",
+  "models_loaded": true,
+  "device": "cuda",
+  "timestamp": "2025-01-01T12:00:00"
+}
+```
+
+#### `POST /analyze`
+
+Analyze log file for anomalies
+
+**Request:**
+
+```bash
+curl -X POST http://44.204.148.194:8000/analyze \
+  -F "file=@hdfs.log"
+```
+
+**Response:**
+
+```json
+{
+  "status": "success",
+  "total_sequences": 250,
+  "anomalies_detected": 31,
+  "anomaly_rate": 0.124,
+  "processing_time": 2.46,
+  "summary": "31 anomalies detected (12.4%). Immediate attention recommended.",
+  "results": [
+    {
+      "sequence_id": 42,
+      "confidence": 0.892,
+      "severity": "high",
+      "explanation": "Multiple ERROR messages indicate recurring system issues",
+      "log_snippet": "[ERROR] org.apache.hadoop.hdfs: Connection timeout..."
+    }
+  ]
+}
+```
+
+#### `GET /stats`
+
+Get model statistics and configuration
+
+**Response:**
+
+```json
+{
+  "model_info": {
+    "classifier": {
+      "name": "DeBERTa-v3-base",
+      "precision": 0.999,
+      "recall": 0.669,
+      "f1_score": 0.801
+    }
+  },
+  "config": {
+    "window_size": 5,
+    "stride": 5,
+    "max_file_size_mb": 50,
+    "device": "cuda"
+  }
+}
+```
+
+## Screenshots
+
+### CI/CD Pipeline
+
+![GitHub Actions Pipeline](images/cicd.png)
+
+### AWS Infrastructure
+
+![EC2 Instance](images/ec2.png)
+
+![ECR Repository](images/ecr.png)
+
+### Application Interface
+
+![Dashboard](images/app.jpeg)
+
+### Docker Process
+
+![Docker Container](images/docker.png)
+
+---
