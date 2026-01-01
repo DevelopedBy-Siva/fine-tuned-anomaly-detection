@@ -80,20 +80,19 @@ class HealthResponse(BaseModel):
 
 
 class ModelManager:
-
     def __init__(self):
         self.classifier = None
         self.classifier_tokenizer = None
         self.reasoning = None
         self.reasoning_tokenizer = None
         self.device = torch.device(config.DEVICE)
+        self.inference_batch_size = 32
 
         logger.info(f"Initializing ModelManager on device: {self.device}")
 
     def load_models(self):
         try:
             logger.info("Loading classifier model...")
-
             clf_path = str(config.CLASSIFIER_PATH.resolve())
             self.classifier_tokenizer = AutoTokenizer.from_pretrained(
                 clf_path, local_files_only=True
@@ -109,10 +108,12 @@ class ModelManager:
             self.classifier.to(self.device)
             self.classifier.eval()
 
+            for param in self.classifier.parameters():
+                param.requires_grad = False
+
             logger.info("Classifier loaded successfully")
 
             logger.info("Loading reasoning model...")
-
             reasoning_path = str(config.REASONING_PATH.resolve())
             self.reasoning_tokenizer = AutoTokenizer.from_pretrained(
                 reasoning_path, local_files_only=True
@@ -128,6 +129,9 @@ class ModelManager:
             self.reasoning.to(self.device)
             self.reasoning.eval()
 
+            for param in self.reasoning.parameters():
+                param.requires_grad = False
+
             logger.info("Reasoning model loaded successfully")
             return True
 
@@ -141,45 +145,105 @@ class ModelManager:
 
         results = []
 
-        with torch.no_grad():
-            encodings = self.classifier_tokenizer(
-                sequences,
-                truncation=True,
-                padding=True,
-                max_length=config.MAX_LENGTH,
-                return_tensors="pt",
-            )
+        for batch_start in range(0, len(sequences), self.inference_batch_size):
+            batch_end = min(batch_start + self.inference_batch_size, len(sequences))
+            batch_sequences = sequences[batch_start:batch_end]
 
-            encodings = {k: v.to(self.device) for k, v in encodings.items()}
+            with torch.no_grad():
+                encodings = self.classifier_tokenizer(
+                    batch_sequences,
+                    truncation=True,
+                    padding=True,
+                    max_length=config.MAX_LENGTH,
+                    return_tensors="pt",
+                )
 
-            outputs = self.classifier(**encodings)
-            logits = outputs.logits
-            probs = torch.softmax(logits, dim=1)
+                encodings = {k: v.to(self.device) for k, v in encodings.items()}
 
-            for idx, (seq, prob) in enumerate(zip(sequences, probs)):
-                anomaly_prob = prob[1].item()
+                outputs = self.classifier(**encodings)
+                logits = outputs.logits
+                probs = torch.softmax(logits, dim=1)
 
-                if anomaly_prob > config.CONFIDENCE_THRESHOLD:
-                    explanation = self.generate_explanation(seq)
+                probs_cpu = probs.cpu()
 
-                    if anomaly_prob > 0.9:
-                        severity = "high"
-                    elif anomaly_prob > 0.7:
-                        severity = "medium"
-                    else:
-                        severity = "low"
+                del encodings, outputs, logits, probs
+                torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
-                    results.append(
-                        {
-                            "sequence_id": idx,
-                            "confidence": anomaly_prob,
-                            "severity": severity,
-                            "explanation": explanation,
-                            "log_snippet": seq[:200],
-                        }
-                    )
+                for idx, (seq, prob) in enumerate(zip(batch_sequences, probs_cpu)):
+                    global_idx = batch_start + idx
+                    anomaly_prob = prob[1].item()
+
+                    if anomaly_prob > config.CONFIDENCE_THRESHOLD:
+                        if anomaly_prob > 0.9:
+                            severity = "high"
+                        elif anomaly_prob > 0.7:
+                            severity = "medium"
+                        else:
+                            severity = "low"
+
+                        results.append(
+                            {
+                                "sequence_id": global_idx,
+                                "confidence": anomaly_prob,
+                                "severity": severity,
+                                "explanation": "",
+                                "log_snippet": seq[:200],
+                                "sequence": seq,
+                            }
+                        )
+
+        if results:
+            self._generate_explanations_batch(results)
 
         return results
+
+    def _generate_explanations_batch(self, results: List[Dict]):
+        sequences_to_explain = [r["sequence"] for r in results]
+
+        explanation_batch_size = 8
+
+        for batch_start in range(0, len(sequences_to_explain), explanation_batch_size):
+            batch_end = min(
+                batch_start + explanation_batch_size, len(sequences_to_explain)
+            )
+            batch_sequences = sequences_to_explain[batch_start:batch_end]
+
+            prompts = [
+                f"Analyze this log sequence and explain why it's anomalous:\n{seq}"
+                for seq in batch_sequences
+            ]
+
+            with torch.no_grad():
+                inputs = self.reasoning_tokenizer(
+                    prompts,
+                    max_length=config.MAX_LENGTH,
+                    truncation=True,
+                    padding=True,
+                    return_tensors="pt",
+                )
+
+                inputs = {k: v.to(self.device) for k, v in inputs.items()}
+
+                outputs = self.reasoning.generate(
+                    **inputs,
+                    max_new_tokens=64,
+                    num_beams=2,
+                    early_stopping=True,
+                )
+
+                outputs_cpu = outputs.cpu()
+
+                del inputs, outputs
+                torch.cuda.empty_cache() if torch.cuda.is_available() else None
+
+                for idx, output in enumerate(outputs_cpu):
+                    explanation = self.reasoning_tokenizer.decode(
+                        output, skip_special_tokens=True
+                    )
+                    results[batch_start + idx]["explanation"] = explanation
+
+        for r in results:
+            r.pop("sequence", None)
 
     def generate_explanation(self, sequence: str) -> str:
         try:
@@ -198,12 +262,15 @@ class ModelManager:
 
             with torch.no_grad():
                 outputs = self.reasoning.generate(
-                    **inputs, max_new_tokens=64, num_beams=4, early_stopping=True
+                    **inputs, max_new_tokens=64, num_beams=2, early_stopping=True
                 )
 
             explanation = self.reasoning_tokenizer.decode(
                 outputs[0], skip_special_tokens=True
             )
+
+            del inputs, outputs
+            torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
             return explanation
 

@@ -294,10 +294,14 @@ const App = () => {
     formData.append("file", file);
 
     try {
-      const response = await fetch("http://44.204.148.194:8000/analyze", {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        "http://localhost:8000/analyze",
+
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -481,7 +485,7 @@ const styles = {
   },
 
   statCard: {
-    backgroundColor: "white",
+    backgroundColor: "#353535ff",
     padding: "1.5rem",
     borderRadius: "12px",
     boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
@@ -511,7 +515,7 @@ const styles = {
   },
 
   summaryCard: {
-    backgroundColor: "white",
+    backgroundColor: "#494949ff",
     padding: "1.5rem",
     borderRadius: "12px",
     boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
@@ -522,17 +526,17 @@ const styles = {
     margin: "0 0 0.75rem 0",
     fontSize: "1.125rem",
     fontWeight: "600",
-    color: "#111827",
+    color: "#fff",
   },
 
   summaryText: {
     margin: 0,
-    color: "#4B5563",
+    color: "#9c9c9cff",
     lineHeight: "1.6",
   },
 
   noAnomalies: {
-    backgroundColor: "white",
+    backgroundColor: "#494949ff",
     padding: "3rem 2rem",
     borderRadius: "12px",
     textAlign: "center",
@@ -552,7 +556,7 @@ const styles = {
   },
 
   anomalySection: {
-    backgroundColor: "white",
+    backgroundColor: "#494949ff",
     padding: "1.5rem",
     borderRadius: "12px",
     boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
@@ -562,7 +566,7 @@ const styles = {
     margin: "0 0 1.5rem 0",
     fontSize: "1.25rem",
     fontWeight: "600",
-    color: "#111827",
+    color: "#fff",
   },
 
   anomalyList: {
@@ -572,8 +576,8 @@ const styles = {
   },
 
   anomalyCard: {
-    backgroundColor: "#F9FAFB",
-    border: "1px solid #E5E7EB",
+    backgroundColor: "#7a7a7aff",
+    border: "1px solid #bababaff",
     borderRadius: "8px",
     padding: "1rem",
   },
@@ -595,7 +599,7 @@ const styles = {
   anomalyNumber: {
     fontSize: "0.875rem",
     fontWeight: "600",
-    color: "#6B7280",
+    color: "#dfe0e1ff",
   },
 
   severityBadge: {
@@ -608,7 +612,7 @@ const styles = {
 
   confidence: {
     fontSize: "0.875rem",
-    color: "#6B7280",
+    color: "#dfe0e1ff",
   },
 
   expandButton: {
@@ -616,7 +620,7 @@ const styles = {
     height: "32px",
     borderRadius: "6px",
     border: "1px solid #D1D5DB",
-    backgroundColor: "white",
+    backgroundColor: "#a1a1a1ff",
     cursor: "pointer",
     fontSize: "1.25rem",
     fontWeight: "600",
@@ -644,7 +648,7 @@ const styles = {
   snippetHeader: {
     fontSize: "0.875rem",
     fontWeight: "600",
-    color: "#6B7280",
+    color: "#c0c0c0ff",
     marginBottom: "0.5rem",
   },
 
