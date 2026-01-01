@@ -142,7 +142,7 @@ const StatsCards = ({ results }) => {
       label: "Anomalies Detected",
       value: results.anomalies_detected,
       color: results.anomalies_detected > 0 ? "#DC2626" : "#10B981",
-      icon: results.anomalies_detected > 0 ? "⚠️" : "✓",
+      icon: results.anomalies_detected > 0 ? "" : "✓",
     },
     {
       label: "Anomaly Rate",
@@ -168,7 +168,7 @@ const StatsCards = ({ results }) => {
       {cards.map((card, index) => (
         <div key={index} style={styles.statCard}>
           <div style={styles.statCardHeader}>
-            <span style={styles.statIcon}>{card.icon}</span>
+            {/* <span style={styles.statIcon}>{card.icon}</span> */}
             <span style={styles.statLabel}>{card.label}</span>
           </div>
           <div style={{ ...styles.statValue, color: card.color }}>
@@ -576,8 +576,8 @@ const styles = {
   },
 
   anomalyCard: {
-    backgroundColor: "#7a7a7aff",
-    border: "1px solid #bababaff",
+    backgroundColor: "#585858ff",
+    border: "1px solid #6f6f6fff",
     borderRadius: "8px",
     padding: "1rem",
   },
@@ -619,7 +619,7 @@ const styles = {
     width: "32px",
     height: "32px",
     borderRadius: "6px",
-    border: "1px solid #D1D5DB",
+    border: "1px solid #6f6f6fff",
     backgroundColor: "#a1a1a1ff",
     cursor: "pointer",
     fontSize: "1.25rem",
@@ -637,7 +637,7 @@ const styles = {
   },
 
   explanation: {
-    color: "#374151",
+    color: "#c9c9c9ff",
     lineHeight: "1.6",
   },
 

@@ -8,7 +8,7 @@ A system for detecting anomalies in distributed system logs using fine-tuned tra
 
 This project implements an intelligent anomaly detection system for analyzing log files from distributed systems (HDFS). Unlike traditional rule-based approaches, it uses **dual transformer models** to not only detect anomalies but also provide human-readable explanations for each detection.
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────┐
@@ -140,8 +140,8 @@ AWS CLI
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/yourusername/log-anomaly-detection.git
-cd log-anomaly-detection
+git clone https://github.com/DevelopedBy-Siva/fine-tuned-anomaly-detection.git
+cd fine-tuned-anomaly-detection
 ```
 
 2. **Set up Python environment**
@@ -344,10 +344,6 @@ Get model statistics and configuration
 ![EC2 Instance](images/ec2.png)
 
 ![ECR Repository](images/ecr.png)
-
-### Application Interface
-
-![Dashboard](images/app.jpeg)
 
 ### Docker Process
 
