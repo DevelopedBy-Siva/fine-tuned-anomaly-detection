@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from app.services.storage import get_db, Project
 from app.services.auth import (
     hash_password,
@@ -9,6 +9,14 @@ from app.services.auth import (
     create_access_token,
     decode_access_token,
 )
+from app.services.validators import (
+    validate_url,
+    validate_discord_webhook,
+    validate_email,
+    validate_log_source_url,
+)
+
+import re
 
 router = APIRouter()
 security = HTTPBearer()
@@ -17,11 +25,28 @@ security = HTTPBearer()
 class ProjectCreate(BaseModel):
     name: str
     password: str
-    discord_webhook_escalate: str = ""
-    discord_webhook_dev: str = ""
-    smtp_user: str = ""
-    smtp_password: str = ""
-    oncall_email: str = ""
+    log_source_url: str
+    user_email: str
+    discord_webhook_escalate: str
+    discord_webhook_dev: str
+
+    @validator("name")
+    def validate_name(cls, v):
+        if len(v) < 3:
+            raise ValueError("Project name must be at least 3 characters")
+        if len(v) > 50:
+            raise ValueError("Project name must be less than 50 characters")
+        if not re.match(r"^[a-zA-Z0-9_-]+$", v):
+            raise ValueError(
+                "Project name can only contain letters, numbers, hyphens, and underscores"
+            )
+        return v
+
+    @validator("password")
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
 
 
 class ProjectLogin(BaseModel):
@@ -32,33 +57,115 @@ class ProjectLogin(BaseModel):
 class ProjectResponse(BaseModel):
     id: str
     name: str
+    log_source_url: str
+    user_email: str
     discord_webhook_escalate: str
     discord_webhook_dev: str
-    smtp_user: str
-    oncall_email: str
     created_at: str
 
     class Config:
         from_attributes = True
 
 
+class ValidationResponse(BaseModel):
+    field: str
+    is_valid: bool
+    message: str
+
+
+@router.post("/validate/url", response_model=ValidationResponse)
+def validate_log_url(data: dict):
+    """Validate log source URL by actually connecting to it"""
+    url = data.get("url", "")
+    is_valid, message = validate_log_source_url(url)  # Changed from validate_url
+
+    return {"field": "log_source_url", "is_valid": is_valid, "message": message}
+
+
+@router.post("/validate/discord-escalate", response_model=ValidationResponse)
+def validate_discord_escalate_webhook(data: dict):
+    """Validate Discord ESCALATE webhook"""
+    webhook_url = data.get("webhook_url", "")
+    is_valid, message = validate_discord_webhook(webhook_url)
+
+    return {
+        "field": "discord_webhook_escalate",
+        "is_valid": is_valid,
+        "message": message if not is_valid else "Discord webhook verified successfully",
+    }
+
+
+@router.post("/validate/discord-dev", response_model=ValidationResponse)
+def validate_discord_dev_webhook(data: dict):
+    """Validate Discord DEV webhook"""
+    webhook_url = data.get("webhook_url", "")
+    is_valid, message = validate_discord_webhook(webhook_url)
+
+    return {
+        "field": "discord_webhook_dev",
+        "is_valid": is_valid,
+        "message": message if not is_valid else "Discord webhook verified successfully",
+    }
+
+
+@router.post("/validate/email", response_model=ValidationResponse)
+def validate_user_email(data: dict):
+    """Validate user email"""
+    email = data.get("email", "")
+    is_valid, message = validate_email(email)
+
+    return {
+        "field": "user_email",
+        "is_valid": is_valid,
+        "message": message if not is_valid else "Email format is valid",
+    }
+
+
 @router.post("/register")
 def register_project(project: ProjectCreate, db: Session = Depends(get_db)):
-    """Create a new project"""
+    """Create a new project with full validation"""
+
     # Check if project name already exists
     existing = db.query(Project).filter(Project.name == project.name).first()
     if existing:
         raise HTTPException(status_code=400, detail="Project name already exists")
 
+    # Validate all fields
+    errors = []
+
+    # Validate log source URL (with actual connection test)
+    url_valid, url_msg = validate_log_source_url(project.log_source_url)  # Changed
+    if not url_valid:
+        errors.append({"field": "log_source_url", "message": url_msg})
+
+    # Validate email
+    email_valid, email_msg = validate_email(project.user_email)
+    if not email_valid:
+        errors.append({"field": "user_email", "message": email_msg})
+
+    # Validate Discord webhooks (with actual test messages)
+    escalate_valid, escalate_msg = validate_discord_webhook(
+        project.discord_webhook_escalate
+    )
+    if not escalate_valid:
+        errors.append({"field": "discord_webhook_escalate", "message": escalate_msg})
+
+    dev_valid, dev_msg = validate_discord_webhook(project.discord_webhook_dev)
+    if not dev_valid:
+        errors.append({"field": "discord_webhook_dev", "message": dev_msg})
+
+    # If any validation failed, return errors
+    if errors:
+        raise HTTPException(status_code=400, detail={"errors": errors})
+
     # Create project
     new_project = Project(
         name=project.name,
         password_hash=hash_password(project.password),
+        log_source_url=project.log_source_url,
+        user_email=project.user_email,
         discord_webhook_escalate=project.discord_webhook_escalate,
         discord_webhook_dev=project.discord_webhook_dev,
-        smtp_user=project.smtp_user,
-        smtp_password=project.smtp_password,
-        oncall_email=project.oncall_email,
     )
 
     db.add(new_project)
@@ -73,7 +180,15 @@ def register_project(project: ProjectCreate, db: Session = Depends(get_db)):
     return {
         "access_token": token,
         "token_type": "bearer",
-        "project": ProjectResponse.from_orm(new_project),
+        "project": {
+            "id": new_project.id,
+            "name": new_project.name,
+            "log_source_url": new_project.log_source_url,
+            "user_email": new_project.user_email,
+            "discord_webhook_escalate": new_project.discord_webhook_escalate,
+            "discord_webhook_dev": new_project.discord_webhook_dev,
+            "created_at": new_project.created_at.isoformat(),
+        },
     }
 
 
@@ -99,7 +214,15 @@ def login_project(credentials: ProjectLogin, db: Session = Depends(get_db)):
     return {
         "access_token": token,
         "token_type": "bearer",
-        "project": ProjectResponse.from_orm(new_project),
+        "project": {
+            "id": project.id,
+            "name": project.name,
+            "log_source_url": project.log_source_url,
+            "user_email": project.user_email,
+            "discord_webhook_escalate": project.discord_webhook_escalate,
+            "discord_webhook_dev": project.discord_webhook_dev,
+            "created_at": project.created_at.isoformat(),
+        },
     }
 
 
@@ -140,12 +263,37 @@ def update_project_settings(
     project: Project = Depends(get_current_project),
     db: Session = Depends(get_db),
 ):
-    """Update project notification settings"""
+    """Update project settings"""
+
+    # Validate all fields
+    errors = []
+
+    url_valid, url_msg = validate_url(settings.log_source_url)
+    if not url_valid:
+        errors.append({"field": "log_source_url", "message": url_msg})
+
+    email_valid, email_msg = validate_email(settings.user_email)
+    if not email_valid:
+        errors.append({"field": "user_email", "message": email_msg})
+
+    escalate_valid, escalate_msg = validate_discord_webhook(
+        settings.discord_webhook_escalate
+    )
+    if not escalate_valid:
+        errors.append({"field": "discord_webhook_escalate", "message": escalate_msg})
+
+    dev_valid, dev_msg = validate_discord_webhook(settings.discord_webhook_dev)
+    if not dev_valid:
+        errors.append({"field": "discord_webhook_dev", "message": dev_msg})
+
+    if errors:
+        raise HTTPException(status_code=400, detail={"errors": errors})
+
+    # Update project
+    project.log_source_url = settings.log_source_url
+    project.user_email = settings.user_email
     project.discord_webhook_escalate = settings.discord_webhook_escalate
     project.discord_webhook_dev = settings.discord_webhook_dev
-    project.smtp_user = settings.smtp_user
-    project.smtp_password = settings.smtp_password
-    project.oncall_email = settings.oncall_email
 
     # Update password if provided
     if settings.password:

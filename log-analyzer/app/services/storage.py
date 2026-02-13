@@ -33,14 +33,17 @@ class Project(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, unique=True, nullable=False, index=True)
-    password_hash = Column(String, nullable=False)  # bcrypt hash
+    password_hash = Column(String, nullable=False)
 
-    # Notification settings
-    discord_webhook_escalate = Column(String)
-    discord_webhook_dev = Column(String)
-    smtp_user = Column(String)
-    smtp_password = Column(String)
-    oncall_email = Column(String)
+    # Log source
+    log_source_url = Column(String, nullable=False)  # URL where logs come from
+
+    # User contact
+    user_email = Column(String, nullable=False)  # Where to send incident emails
+
+    # Discord webhooks
+    discord_webhook_escalate = Column(String, nullable=False)
+    discord_webhook_dev = Column(String, nullable=False)
 
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
@@ -50,7 +53,7 @@ class Incident(Base):
     __tablename__ = "incidents"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    project_id = Column(String, nullable=False, index=True)  # Which project owns this
+    project_id = Column(String, nullable=False, index=True)
     source = Column(String, nullable=False, index=True)
     environment = Column(String, default="dev")
     signature = Column(String, nullable=False, index=True)
@@ -76,7 +79,7 @@ class Analysis(Base):
     runbook_match_score = Column(Float)
     ticket_title = Column(String)
     ticket_body = Column(String)
-    analysis_source = Column(String)  # 'runbook' or 'llm'
+    analysis_source = Column(String)
 
 
 def init_db():
