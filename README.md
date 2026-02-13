@@ -78,7 +78,7 @@ An intelligent log analysis system that automatically detects, clusters, and ana
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/log-analyzer.git
+git clone https://github.com/DevelopedBy-Siva/fine-tuned-anomaly-detection.git
 cd log-analyzer
 ```
 
@@ -487,7 +487,7 @@ MIT License - feel free to use this project for learning or portfolio purposes.
 
 ---
 
-## 📸 Screenshots
+<!-- ## 📸 Screenshots
 
 ### Dashboard Overview
 
@@ -499,6 +499,6 @@ MIT License - feel free to use this project for learning or portfolio purposes.
 
 ### AI Analysis with Ticket Draft
 
-![AI Analysis](docs/ai-analysis.png)
+![AI Analysis](docs/ai-analysis.png) -->
 
 ---
