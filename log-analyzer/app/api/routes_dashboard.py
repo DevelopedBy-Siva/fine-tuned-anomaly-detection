@@ -246,6 +246,59 @@ def dashboard(db: Session = Depends(get_db)):
                 line-height: 1.6;
             }
             
+            .ticket-draft {
+                margin-top: 15px;
+                padding: 15px;
+                background: #fff5f5;
+                border-radius: 6px;
+                border-left: 4px solid #e53e3e;
+            }
+            
+            .ticket-draft-header {
+                font-weight: bold;
+                color: #2d3748;
+                margin-bottom: 8px;
+                font-size: 14px;
+            }
+            
+            .ticket-title {
+                background: white;
+                padding: 10px;
+                border-radius: 4px;
+                margin-bottom: 10px;
+                font-weight: 600;
+                color: #2d3748;
+            }
+            
+            .ticket-body {
+                background: white;
+                padding: 10px;
+                border-radius: 4px;
+                font-size: 13px;
+                color: #4a5568;
+                line-height: 1.6;
+                white-space: pre-wrap;
+            }
+            
+            .analysis-badge {
+                display: inline-block;
+                padding: 3px 8px;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: bold;
+                margin-left: 8px;
+            }
+            
+            .analysis-runbook {
+                background: #c6f6d5;
+                color: #22543d;
+            }
+            
+            .analysis-llm {
+                background: #e9d8fd;
+                color: #553c9a;
+            }
+            
             .signature {
                 color: #718096;
                 font-size: 11px;
@@ -270,6 +323,7 @@ def dashboard(db: Session = Depends(get_db)):
                 font-size: 24px;
                 margin-bottom: 10px;
             }
+            
         </style>
     </head>
     <body>
@@ -301,7 +355,7 @@ def dashboard(db: Session = Depends(get_db)):
                         <div class="stat-value">"""
         + str(len(analyses_map))
         + """</div>
-                        <div class="stat-label">Matched Runbooks</div>
+                        <div class="stat-label">Analyzed</div>
                     </div>
                 </div>
             </div>
@@ -338,14 +392,24 @@ def dashboard(db: Session = Depends(get_db)):
                     <div class="sample">{sample}</div>
             """
 
-            # Add runbook match info if available
+            # Add analysis info if available
             analysis = analyses_map.get(inc.id)
             if analysis:
                 confidence_pct = int(analysis.confidence * 100)
+                source_label = (
+                    "Runbook Match"
+                    if analysis.analysis_source == "runbook"
+                    else "AI Analysis"
+                )
+                source_class = (
+                    "runbook" if analysis.analysis_source == "runbook" else "llm"
+                )
+
                 html += f"""
                     <div class="runbook-match">
                         <div class="runbook-header">
                             📋 {analysis.summary}
+                            <span class="analysis-badge analysis-{source_class}">{source_label}</span>
                         </div>
                         <div class="runbook-meta">
                             <span class="disposition-badge disposition-{analysis.disposition}">{analysis.disposition}</span>
@@ -363,6 +427,20 @@ def dashboard(db: Session = Depends(get_db)):
                         </div>
                     </div>
                 """
+
+                # Add ticket draft for LLM analysis
+                if analysis.analysis_source == "llm" and analysis.ticket_title:
+                    html += f"""
+                    <div class="ticket-draft">
+                        <div class="ticket-draft-header">
+                            🎫 Generated Ticket Draft
+                        </div>
+                        <div class="ticket-title">
+                            {analysis.ticket_title}
+                        </div>
+                        <div class="ticket-body">{analysis.ticket_body}</div>
+                    </div>
+                    """
 
             html += f"""
                     <div class="signature">

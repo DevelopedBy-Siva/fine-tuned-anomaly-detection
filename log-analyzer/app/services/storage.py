@@ -28,6 +28,11 @@ class Analysis(Base):
     matched_runbook_id = Column(String)
     runbook_match_score = Column(Float)
 
+    # LLM-generated fields
+    ticket_title = Column(String)
+    ticket_body = Column(String)
+    analysis_source = Column(String)  # 'runbook' or 'llm'
+
 
 class Incident(Base):
     __tablename__ = "incidents"
