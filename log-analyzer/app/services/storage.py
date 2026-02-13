@@ -13,6 +13,7 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 import uuid
 import os
+import secrets
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -35,11 +36,20 @@ class Project(Base):
     name = Column(String, unique=True, nullable=False, index=True)
     password_hash = Column(String, nullable=False)
 
+    # API Key for log ingestion
+    api_key = Column(
+        String,
+        unique=True,
+        nullable=False,
+        index=True,
+        default=lambda: secrets.token_urlsafe(32),
+    )
+
     # Log source
-    log_source_url = Column(String, nullable=False)  # URL where logs come from
+    log_source_url = Column(String, nullable=False)
 
     # User contact
-    user_email = Column(String, nullable=False)  # Where to send incident emails
+    user_email = Column(String, nullable=False)
 
     # Discord webhooks
     discord_webhook_escalate = Column(String, nullable=False)

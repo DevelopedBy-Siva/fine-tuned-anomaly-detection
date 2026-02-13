@@ -2,26 +2,24 @@ from datetime import datetime, timedelta
 from app.services.storage import Incident, SessionLocal
 
 CLUSTER_WINDOW_MINUTES = 5
-
 MAX_SAMPLES = 10
 
 
-def cluster_log(source: str, environment: str, parsed_log, signature: str) -> Incident:
+def cluster_log(
+    project_id: str, source: str, environment: str, parsed_log, signature: str
+) -> Incident:  # CHANGED
     """
     Find or create incident for this log.
-
-    Logic:
-    1. Look for recent incident with same signature
-    2. If found: increment count, update timestamp
-    3. If not found: create new incident
     """
     db = SessionLocal()
 
+    # Look for recent incident with same signature and project
     cutoff = datetime.utcnow() - timedelta(minutes=CLUSTER_WINDOW_MINUTES)
 
     incident = (
         db.query(Incident)
         .filter(
+            Incident.project_id == project_id,  # ADD THIS
             Incident.signature == signature,
             Incident.source == source,
             Incident.last_seen >= cutoff,
@@ -31,15 +29,19 @@ def cluster_log(source: str, environment: str, parsed_log, signature: str) -> In
     )
 
     if incident:
+        # Update existing incident
         incident.count += 1
         incident.last_seen = datetime.utcnow()
 
+        # Add sample if we don't have too many
         samples = incident.sample_lines or []
         if len(samples) < MAX_SAMPLES:
             samples.append(parsed_log.raw)
             incident.sample_lines = samples
     else:
+        # Create new incident
         incident = Incident(
+            project_id=project_id,  # ADD THIS
             source=source,
             environment=environment,
             signature=signature,

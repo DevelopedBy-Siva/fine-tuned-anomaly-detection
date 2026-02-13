@@ -174,6 +174,7 @@ function Register() {
               placeholder="••••••••"
               required
               minLength={8}
+              maxLength={72}
             />
             <p className="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
           </div>

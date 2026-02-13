@@ -13,15 +13,15 @@ load_dotenv()
 class NotificationService:
     """Send notifications to Discord and Email based on disposition"""
 
-    def __init__(self):
-        self.discord_escalate_url = os.getenv("DISCORD_WEBHOOK_ESCALATE")
-        self.discord_dev_url = os.getenv("DISCORD_WEBHOOK_DEV")
+    def __init__(self, project=None):
+        self.discord_escalate_url = project.discord_webhook_escalate
+        self.discord_dev_url = project.discord_webhook_dev
 
         self.smtp_host = os.getenv("SMTP_HOST")
         self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
         self.smtp_user = os.getenv("SMTP_USER")
         self.smtp_password = os.getenv("SMTP_PASSWORD")
-        self.oncall_email = os.getenv("ONCALL_EMAIL")
+        self.oncall_email = project.user_email
 
     def send_discord(self, webhook_url: str, incident, analysis) -> bool:
         """Send formatted message to Discord"""
@@ -244,13 +244,6 @@ Dashboard: http://localhost:8000/api/dashboard
             return False
 
 
-# Singleton instance
-_notification_service: Optional[NotificationService] = None
-
-
-def get_notification_service() -> NotificationService:
-    """Get or create singleton notification service"""
-    global _notification_service
-    if _notification_service is None:
-        _notification_service = NotificationService()
-    return _notification_service
+def get_notification_service(project=None) -> NotificationService:
+    """Get notification service for a specific project"""
+    return NotificationService(project=project)

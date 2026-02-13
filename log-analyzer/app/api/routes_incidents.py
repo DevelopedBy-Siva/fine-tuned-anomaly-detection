@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from app.services.storage import get_db, Incident, Analysis
+from app.services.storage import get_db, Incident, Analysis, Project  # ADD Project here
 from app.models.schemas import IncidentResponse
+from app.api.routes_auth import get_current_project  # Import the dependency
 
 router = APIRouter()
 
@@ -12,10 +13,11 @@ def list_incidents(
     status: Optional[str] = None,
     source: Optional[str] = None,
     limit: int = 50,
+    project: Project = Depends(get_current_project),
     db: Session = Depends(get_db),
 ):
     """List incidents with optional filters"""
-    query = db.query(Incident)
+    query = db.query(Incident).filter(Incident.project_id == project.id)
 
     if status:
         query = query.filter(Incident.status == status)
@@ -64,11 +66,20 @@ def list_incidents(
 
 
 @router.get("/incidents/{incident_id}")
-def get_incident(incident_id: str, db: Session = Depends(get_db)):
+def get_incident(
+    incident_id: str,
+    project: Project = Depends(get_current_project),
+    db: Session = Depends(get_db),
+):
     """Get single incident by ID"""
-    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    incident = (
+        db.query(Incident)
+        .filter(Incident.id == incident_id, Incident.project_id == project.id)
+        .first()
+    )
+
     if not incident:
-        return {"error": "Incident not found"}
+        raise HTTPException(status_code=404, detail="Incident not found")
 
     analysis = (
         db.query(Analysis)
@@ -105,22 +116,42 @@ def get_incident(incident_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/incidents/{incident_id}/close")
-def close_incident(incident_id: str, db: Session = Depends(get_db)):
+def close_incident(
+    incident_id: str,
+    project: Project = Depends(get_current_project),
+    db: Session = Depends(get_db),
+):
     """Mark incident as closed"""
-    incident = db.query(Incident).filter(Incident.id == incident_id).first()
-    if incident:
-        incident.status = "closed"
-        db.commit()
-        return {"status": "closed"}
-    return {"error": "Incident not found"}
+    incident = (
+        db.query(Incident)
+        .filter(Incident.id == incident_id, Incident.project_id == project.id)
+        .first()
+    )
+
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    incident.status = "closed"
+    db.commit()
+    return {"status": "closed"}
 
 
 @router.post("/incidents/{incident_id}/ignore")
-def ignore_incident(incident_id: str, db: Session = Depends(get_db)):
+def ignore_incident(
+    incident_id: str,
+    project: Project = Depends(get_current_project),
+    db: Session = Depends(get_db),
+):
     """Mark incident as ignored"""
-    incident = db.query(Incident).filter(Incident.id == incident_id).first()
-    if incident:
-        incident.status = "ignored"
-        db.commit()
-        return {"status": "ignored"}
-    return {"error": "Incident not found"}
+    incident = (
+        db.query(Incident)
+        .filter(Incident.id == incident_id, Incident.project_id == project.id)
+        .first()
+    )
+
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    incident.status = "ignored"
+    db.commit()
+    return {"status": "ignored"}

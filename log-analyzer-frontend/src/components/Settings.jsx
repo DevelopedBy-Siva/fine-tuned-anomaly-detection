@@ -137,7 +137,32 @@ function Settings() {
               Project name cannot be changed
             </p>
           </div>
-
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              API Key (for log ingestion)
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={project.api_key}
+                disabled
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 font-mono text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(project.api_key);
+                  alert("API key copied to clipboard!");
+                }}
+                className="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                Copy
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Use this in your log shipper's X-API-Key header
+            </p>
+          </div>
           {/* Password */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -153,7 +178,6 @@ function Settings() {
               minLength={8}
             />
           </div>
-
           {/* Log Source URL */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -168,7 +192,6 @@ function Settings() {
               required
             />
           </div>
-
           {/* User Email */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -183,7 +206,6 @@ function Settings() {
               required
             />
           </div>
-
           {/* Discord Webhook - ESCALATE */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -198,7 +220,6 @@ function Settings() {
               required
             />
           </div>
-
           {/* Discord Webhook - DEV */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -213,7 +234,6 @@ function Settings() {
               required
             />
           </div>
-
           <button
             type="submit"
             disabled={loading}

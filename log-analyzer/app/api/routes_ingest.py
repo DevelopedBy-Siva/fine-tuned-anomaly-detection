@@ -1,27 +1,47 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException, Header
+from sqlalchemy.orm import Session
 from app.models.schemas import IngestRequest, IngestResponse
 from app.core.parser import ParsedLog
 from app.core.signatures import generate_signature
 from app.core.clustering import cluster_log
 from app.core.runbook_matcher import match_runbook, should_escalate
 from app.core.decision_engine import get_decision_engine
-from app.services.storage import Analysis, SessionLocal
-from app.services.notifications import get_notification_service  # Add this
+from app.services.storage import Analysis, SessionLocal, get_db, Project
+from app.services.notifications import get_notification_service
 
 router = APIRouter()
 
 
+def get_project_by_api_key(
+    x_api_key: str = Header(..., alias="X-API-Key"), db: Session = Depends(get_db)
+) -> Project:
+    """Authenticate request using API key"""
+    project = db.query(Project).filter(Project.api_key == x_api_key).first()
+
+    if not project:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+    if not project.is_active:
+        raise HTTPException(status_code=403, detail="Project is inactive")
+
+    return project
+
+
 @router.post("/ingest", response_model=IngestResponse)
-def ingest_logs(request: IngestRequest):
+def ingest_logs(
+    request: IngestRequest,
+    project: Project = Depends(get_project_by_api_key),  # CHANGED
+):
     """
     Receive logs, parse them, cluster into incidents, apply runbooks or LLM analysis.
+    Requires X-API-Key header for authentication.
     """
     created = set()
     updated = set()
     processed = 0
 
     decision_engine = get_decision_engine()
-    notification_service = get_notification_service()  # Add this
+    notification_service = get_notification_service(project=project)
 
     for log_line in request.logs:
         # Parse
@@ -35,8 +55,14 @@ def ingest_logs(request: IngestRequest):
         # Generate signature
         sig = generate_signature(request.source, parsed)
 
-        # Cluster
-        incident = cluster_log(request.source, request.environment, parsed, sig)
+        # Cluster (now passing project_id)
+        incident = cluster_log(
+            project_id=project.id,  # ADD THIS
+            source=request.source,
+            environment=request.environment,
+            parsed_log=parsed,
+            signature=sig,
+        )
 
         # Analyze incident (only for new or low-count incidents)
         if incident.count <= 3:
@@ -74,7 +100,7 @@ def ingest_logs(request: IngestRequest):
                     db.commit()
                     db.refresh(analysis)
 
-                    # Send notification (NEW)
+                    # Send notification
                     notification_service.route_notification(incident, analysis)
 
                 else:
@@ -97,7 +123,7 @@ def ingest_logs(request: IngestRequest):
                         db.commit()
                         db.refresh(analysis)
 
-                        # Send notification (NEW)
+                        # Send notification
                         notification_service.route_notification(incident, analysis)
 
             db.close()

@@ -112,8 +112,9 @@ def validate_discord_webhook(webhook_url: str) -> Tuple[bool, str]:
         return False, "Discord webhook URL is required"
 
     # Check Discord webhook URL format
-    discord_pattern = re.compile(r"^https://discord\.com/api/webhooks/\d+/[\w-]+$")
-
+    discord_pattern = re.compile(
+        r"^https://(?:www\.)?(?:discord(?:app)?\.com)/api/webhooks/\d+/[\w-]+$"
+    )
     if not discord_pattern.match(webhook_url):
         return (
             False,
