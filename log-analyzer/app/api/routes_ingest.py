@@ -6,6 +6,7 @@ from app.core.clustering import cluster_log
 from app.core.runbook_matcher import match_runbook, should_escalate
 from app.core.decision_engine import get_decision_engine
 from app.services.storage import Analysis, SessionLocal
+from app.services.notifications import get_notification_service  # Add this
 
 router = APIRouter()
 
@@ -20,6 +21,7 @@ def ingest_logs(request: IngestRequest):
     processed = 0
 
     decision_engine = get_decision_engine()
+    notification_service = get_notification_service()  # Add this
 
     for log_line in request.logs:
         # Parse
@@ -69,6 +71,11 @@ def ingest_logs(request: IngestRequest):
                         analysis_source="runbook",
                     )
                     db.add(analysis)
+                    db.commit()
+                    db.refresh(analysis)
+
+                    # Send notification (NEW)
+                    notification_service.route_notification(incident, analysis)
 
                 else:
                     # No runbook or low confidence - use LLM
@@ -87,8 +94,12 @@ def ingest_logs(request: IngestRequest):
                             analysis_source="llm",
                         )
                         db.add(analysis)
+                        db.commit()
+                        db.refresh(analysis)
 
-            db.commit()
+                        # Send notification (NEW)
+                        notification_service.route_notification(incident, analysis)
+
             db.close()
 
         # Track created vs updated
