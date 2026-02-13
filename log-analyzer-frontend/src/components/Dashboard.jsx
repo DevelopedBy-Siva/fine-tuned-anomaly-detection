@@ -6,7 +6,7 @@ import { RefreshCw, Filter, AlertTriangle } from "lucide-react";
 
 function Dashboard() {
   const [incidents, setIncidents] = useState([]);
-  const [analyses, setAnalyses] = useState({});
+  //   const [analyses, setAnalyses] = useState({});
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     status: "open",
