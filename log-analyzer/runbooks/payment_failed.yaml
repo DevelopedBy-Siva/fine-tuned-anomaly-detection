@@ -1,0 +1,30 @@
+id: payment_failed
+name: Payment Processing Failures
+description: Credit card processing errors
+default_severity: high
+disposition: NEEDS_DEV
+
+patterns:
+  - "payment processing failed"
+  - "invalidcardexception"
+  - "insufficientfundsexception"
+  - "expiredcardexception"
+  - "card declined"
+
+steps:
+  - "Check payment gateway status (Stripe/PayPal dashboard)"
+  - "Review error distribution (all cards failing or specific cards?)"
+  - "Verify API keys and credentials are valid"
+  - "Check for rate limiting from payment provider"
+  - "Review recent payment flow code changes"
+
+routing:
+  team: payments
+  notify: [email, pagerduty]
+
+observe_threshold:
+  count: 5
+  window_minutes: 5
+  escalate_to: ESCALATE
+
+cooldown_minutes: 5

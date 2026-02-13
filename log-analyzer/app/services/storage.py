@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, String, Integer, DateTime, JSON
+from sqlalchemy import Float, create_engine, Column, String, Integer, DateTime, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
@@ -12,6 +12,21 @@ DATABASE_URL = "sqlite:///data/app.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
+
+
+class Analysis(Base):
+    __tablename__ = "analyses"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    incident_id = Column(String, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    severity = Column(String)  # low/medium/high/critical
+    disposition = Column(String)  # NO_ACTION/OBSERVE/NEEDS_DEV/NEEDS_ONCALL/ESCALATE
+    confidence = Column(Float)
+    summary = Column(String)
+    next_steps = Column(JSON)  # Array of strings
+    matched_runbook_id = Column(String)
+    runbook_match_score = Column(Float)
 
 
 class Incident(Base):

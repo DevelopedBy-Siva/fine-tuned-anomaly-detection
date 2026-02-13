@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
-from app.services.storage import get_db, Incident
+from app.services.storage import get_db, Incident, Analysis
 
 router = APIRouter()
 
@@ -11,6 +11,18 @@ def dashboard(db: Session = Depends(get_db)):
     """Simple HTML dashboard to visualize incidents"""
 
     incidents = db.query(Incident).order_by(Incident.last_seen.desc()).limit(50).all()
+
+    # Get latest analysis for each incident
+    analyses_map = {}
+    for inc in incidents:
+        analysis = (
+            db.query(Analysis)
+            .filter(Analysis.incident_id == inc.id)
+            .order_by(Analysis.created_at.desc())
+            .first()
+        )
+        if analysis:
+            analyses_map[inc.id] = analysis
 
     # Build severity badges based on count
     def get_severity_class(count):
@@ -182,6 +194,58 @@ def dashboard(db: Session = Depends(get_db)):
                 line-height: 1.5;
             }
             
+            .runbook-match {
+                margin-top: 15px;
+                padding: 15px;
+                background: #edf2f7;
+                border-radius: 6px;
+                border-left: 4px solid #48bb78;
+            }
+            
+            .runbook-header {
+                font-weight: bold;
+                color: #2d3748;
+                margin-bottom: 8px;
+                font-size: 14px;
+            }
+            
+            .runbook-meta {
+                font-size: 13px;
+                color: #4a5568;
+                margin-bottom: 10px;
+            }
+            
+            .disposition-badge {
+                display: inline-block;
+                padding: 3px 8px;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: bold;
+                text-transform: uppercase;
+            }
+            
+            .disposition-ESCALATE { background: #fed7d7; color: #c53030; }
+            .disposition-NEEDS_ONCALL { background: #feebc8; color: #c05621; }
+            .disposition-NEEDS_DEV { background: #fefcbf; color: #744210; }
+            .disposition-OBSERVE { background: #bee3f8; color: #2c5282; }
+            .disposition-NO_ACTION { background: #c6f6d5; color: #22543d; }
+            
+            .next-steps {
+                margin-top: 10px;
+            }
+            
+            .next-steps strong {
+                color: #2d3748;
+                font-size: 13px;
+            }
+            
+            .next-steps ol {
+                margin: 5px 0 0 20px;
+                color: #4a5568;
+                font-size: 13px;
+                line-height: 1.6;
+            }
+            
             .signature {
                 color: #718096;
                 font-size: 11px;
@@ -233,6 +297,12 @@ def dashboard(db: Session = Depends(get_db)):
         + """</div>
                         <div class="stat-label">High Frequency</div>
                     </div>
+                    <div class="stat">
+                        <div class="stat-value">"""
+        + str(len(analyses_map))
+        + """</div>
+                        <div class="stat-label">Matched Runbooks</div>
+                    </div>
                 </div>
             </div>
             
@@ -266,7 +336,35 @@ def dashboard(db: Session = Depends(get_db)):
                     </div>
                     
                     <div class="sample">{sample}</div>
-                    
+            """
+
+            # Add runbook match info if available
+            analysis = analyses_map.get(inc.id)
+            if analysis:
+                confidence_pct = int(analysis.confidence * 100)
+                html += f"""
+                    <div class="runbook-match">
+                        <div class="runbook-header">
+                            📋 {analysis.summary}
+                        </div>
+                        <div class="runbook-meta">
+                            <span class="disposition-badge disposition-{analysis.disposition}">{analysis.disposition}</span>
+                            <span style="margin-left: 10px;">Confidence: {confidence_pct}%</span>
+                        </div>
+                        <div class="next-steps">
+                            <strong>Next Steps:</strong>
+                            <ol>
+                """
+                # Show first 3 steps
+                for step in (analysis.next_steps or [])[:3]:
+                    html += f"<li>{step}</li>"
+                html += """
+                            </ol>
+                        </div>
+                    </div>
+                """
+
+            html += f"""
                     <div class="signature">
                         Signature: {inc.signature}
                     </div>

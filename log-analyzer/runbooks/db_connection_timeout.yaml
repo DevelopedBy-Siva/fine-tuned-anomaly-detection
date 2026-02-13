@@ -1,0 +1,30 @@
+id: db_connection_timeout
+name: Database Connection Timeout
+description: Database connection pool exhausted or network issues
+default_severity: high
+disposition: NEEDS_ONCALL
+
+patterns:
+  - "database connection timeout"
+  - "connection pool exhausted"
+  - "could not connect to database"
+  - "db-primary"
+  - "db-replica"
+
+steps:
+  - "Check database health metrics (CPU, memory, connections)"
+  - "Verify network connectivity between app and database"
+  - "Check connection pool configuration (max connections)"
+  - "Review recent deployments or schema changes"
+  - "Restart service if connection leak suspected"
+
+routing:
+  team: platform
+  notify: [email, slack]
+
+observe_threshold:
+  count: 10
+  window_minutes: 5
+  escalate_to: ESCALATE
+
+cooldown_minutes: 15
