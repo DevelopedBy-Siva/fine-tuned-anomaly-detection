@@ -12,9 +12,9 @@ from collections import deque
 app = FastAPI(title="Log Server")
 
 
-ANALYZER_URL = os.getenv("ANALYZER_URL", "http://localhost:8000/api/ingest")
-API_KEY = os.getenv("LOGSHIPPER_API_KEY", "")
-cors_origins = os.getenv("CORS_ORIGINS", "")
+ANALYZER_URL = os.getenv("ANALYZER_URL")
+API_KEY = os.getenv("LOGSHIPPER_API_KEY")
+cors_origins = os.getenv("CORS_ORIGINS")
 origins = [origin.strip() for origin in cors_origins.split(",") if origin]
 
 app.add_middleware(
