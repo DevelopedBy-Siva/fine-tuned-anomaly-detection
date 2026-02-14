@@ -53,6 +53,7 @@ class Project(Base):
 
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
+    is_test = Column(Boolean, default=False)
 
 
 class Incident(Base):

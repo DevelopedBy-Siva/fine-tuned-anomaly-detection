@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
+from typing import Optional
 from app.models.schemas import IngestRequest, IngestResponse
 from app.core.parser import ParsedLog
 from app.core.signatures import generate_signature
@@ -13,9 +14,22 @@ router = APIRouter()
 
 
 def get_project_by_api_key(
-    x_api_key: str = Header(..., alias="X-API-Key"), db: Session = Depends(get_db)
-) -> Project:
-    """Authenticate request using API key"""
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db),
+) -> Optional[Project]:
+    """
+    Authenticate request using API key
+    Returns None if no API key provided (for backward compatibility with log server)
+    """
+    if not x_api_key:
+        project = db.query(Project).filter(Project.is_active == True).first()
+        if not project:
+            raise HTTPException(
+                status_code=401,
+                detail="No API key provided and no default project found. Please register a project first.",
+            )
+        return project
+
     project = db.query(Project).filter(Project.api_key == x_api_key).first()
 
     if not project:
@@ -34,7 +48,10 @@ def ingest_logs(
 ):
     """
     Receive logs, parse them, cluster into incidents, apply runbooks or LLM analysis.
-    Requires X-API-Key header for authentication.
+
+    Authentication:
+    - With X-API-Key header: Uses the specified project
+    - Without X-API-Key: Uses first active project (for demo/testing)
     """
     created = set()
     updated = set()
@@ -53,7 +70,7 @@ def ingest_logs(
         sig = generate_signature(request.source, parsed)
 
         incident = cluster_log(
-            project_id=project.id,  # ADD THIS
+            project_id=project.id,
             source=request.source,
             environment=request.environment,
             parsed_log=parsed,
@@ -72,6 +89,7 @@ def ingest_logs(
 
                 if runbook and score >= 0.5:
                     disposition = runbook.disposition
+
                     if disposition == "OBSERVE" and should_escalate(incident, runbook):
                         disposition = runbook.observe_threshold.get(
                             "escalate_to", "ESCALATE"
