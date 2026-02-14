@@ -5,7 +5,6 @@ from collections import deque
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
 LOG_FILE = "logs/app.log"
@@ -80,24 +79,24 @@ class LogTailer:
             if response.status_code == 200:
                 data = response.json()
                 print(
-                    f"✅ Shipped {data['total_logs_processed']} logs | "
+                    f"Shipped {data['total_logs_processed']} logs | "
                     f"Created: {data['incidents_created']} | "
                     f"Updated: {data['incidents_updated']}"
                 )
             else:
-                print(f"⚠️  Analyzer returned {response.status_code}: {response.text}")
+                print(f"Analyzer returned {response.status_code}: {response.text}")
 
         except requests.exceptions.ConnectionError:
-            print("❌ Cannot connect to analyzer. Is it running on port 8000?")
+            print("Cannot connect to analyzer. Is it running on port 8000?")
             self.buffer.extendleft(reversed(logs))
         except Exception as e:
-            print(f"❌ Ship failed: {e}")
+            print(f"Ship failed: {e}")
             self.buffer.extendleft(reversed(logs))
 
 
 if __name__ == "__main__":
     if API_KEY == "YOUR_API_KEY_HERE":
-        print("❌ Please set your API_KEY in the script first!")
+        print("   Please set your API_KEY in the script first!")
         print("   Get it from the React app after registration.")
         exit(1)
 
