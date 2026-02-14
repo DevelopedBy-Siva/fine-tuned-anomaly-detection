@@ -14,7 +14,7 @@ app = FastAPI(title="Log Server")
 
 ANALYZER_URL = os.getenv("ANALYZER_URL", "http://localhost:8000/api/ingest")
 API_KEY = os.getenv("LOGSHIPPER_API_KEY", "")
-cors_origins = os.getenv("CORS_ORIGINS")
+cors_origins = os.getenv("CORS_ORIGINS", "")
 origins = [origin.strip() for origin in cors_origins.split(",") if origin]
 
 app.add_middleware(
@@ -157,7 +157,6 @@ class LogGenerator:
         self.analyzer_url = analyzer_url
         self.api_key = api_key
         self.running = False
-        self.logger = self._setup_logger()
         self.log_buffer = deque(maxlen=20)
         self.stats = {
             "logs_generated": 0,
@@ -165,6 +164,7 @@ class LogGenerator:
             "incidents_created": 0,
             "incidents_updated": 0,
         }
+        self.logger = self._setup_logger()
 
     def _setup_logger(self):
         """Setup in-memory logger"""
