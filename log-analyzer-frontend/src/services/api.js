@@ -10,14 +10,6 @@ const api = axios.create({
   },
 });
 
-// 👇 PUT IT RIGHT HERE
-api.interceptors.request.use((config) => {
-  console.log("AXIOS BASEURL:", config.baseURL);
-  console.log("AXIOS URL:", config.url);
-  console.log("FULL REQUEST:", config.baseURL + config.url);
-  return config;
-});
-
 // Add token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
