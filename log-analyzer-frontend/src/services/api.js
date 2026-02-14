@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL;
+const API_BASE_URL = "https://log-anomaly.onrender.com";
 
 // Create axios instance
 const api = axios.create({
