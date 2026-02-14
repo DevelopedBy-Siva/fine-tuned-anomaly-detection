@@ -1,15 +1,21 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
 } from "react-router-dom";
-import { isAuthenticated } from "./services/api";
+import {
+  API_BASE_URL,
+  isAuthenticated,
+  TEST_LOG_SERVER_URL,
+} from "./services/api";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import Dashboard from "./components/Dashboard";
 import Settings from "./components/Settings";
+import axios from "axios";
+import { MdError } from "react-icons/md";
 
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
@@ -22,7 +28,54 @@ function PublicRoute({ children }) {
 }
 
 function App() {
-  return (
+  const [status, setStatus] = useState({
+    serverA: "pending",
+    serverB: "pending",
+  });
+
+  useEffect(() => {
+    const wake = async (name, url) => {
+      try {
+        await axios.get(url, { timeout: 15000 });
+        setStatus((s) => ({ ...s, [name]: "up" }));
+        return true;
+      } catch {
+        setStatus((s) => ({ ...s, [name]: "down" }));
+        return false;
+      }
+    };
+
+    const wakeAll = async () => {
+      await Promise.all([
+        wake("serverA", `${API_BASE_URL}/health`),
+        wake("serverB", `${TEST_LOG_SERVER_URL}/health`),
+      ]);
+    };
+
+    wakeAll();
+  }, []);
+
+  return status.serverA !== "up" && status.serverB !== "up" ? (
+    <div className="server-loading">
+      {status.serverA === "pending" || status.serverB === "pending" ? (
+        <>
+          <span class="loader"></span>
+          <p>
+            Please allow a few seconds for everything to initialize, as the
+            servers are on free instances.
+          </p>
+        </>
+      ) : status.serverA === "down" || status.serverB === "down" ? (
+        <>
+          <MdError />
+          <p>Failed to initialize the server. Please try again later. </p>
+        </>
+      ) : (
+        <p>Initialize Successful </p>
+      )}
+      <p></p>
+    </div>
+  ) : (
     <Router>
       <Routes>
         {/* Public Routes */}
