@@ -1,8 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL;
-console.log("REACT_APP_API_URL =", process.env.REACT_APP_API_URL);
-console.log("API_BASE_URL =", API_BASE_URL);
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
 // Create axios instance
 const api = axios.create({
@@ -10,6 +8,14 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+});
+
+// 👇 PUT IT RIGHT HERE
+api.interceptors.request.use((config) => {
+  console.log("AXIOS BASEURL:", config.baseURL);
+  console.log("AXIOS URL:", config.url);
+  console.log("FULL REQUEST:", config.baseURL + config.url);
+  return config;
 });
 
 // Add token to requests
