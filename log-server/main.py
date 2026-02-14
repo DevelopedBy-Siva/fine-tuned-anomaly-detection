@@ -1,8 +1,10 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import random
 import time
+import os
 
 from logger_config import setup_logger
 from error_patterns import ERROR_GENERATORS, ErrorPatterns
@@ -20,6 +22,18 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="log-server", lifespan=lifespan)
+
+cors_origins = os.getenv("CORS_ORIGINS")
+origins = [origin.strip() for origin in cors_origins.split(",") if origin]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 logger = setup_logger()
 
 ERROR_RATE = 0.15

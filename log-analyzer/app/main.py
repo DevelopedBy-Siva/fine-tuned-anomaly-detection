@@ -18,7 +18,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Log Analyzer", lifespan=lifespan)
 
 
-cors_origins = os.getenv("CORS_ORIGINS", "")
+cors_origins = os.getenv("CORS_ORIGINS")
 origins = [origin.strip() for origin in cors_origins.split(",") if origin]
 
 app.add_middleware(
