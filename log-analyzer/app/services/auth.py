@@ -17,10 +17,8 @@ def hash_password(password: str) -> str:
     Hash a password using bcrypt.
     Truncates to 72 bytes to comply with bcrypt limits.
     """
-    # Truncate to 72 bytes if needed (bcrypt limitation)
     password_bytes = password.encode("utf-8")
     if len(password_bytes) > 72:
-        # Hash long passwords first to get a fixed-length input
         password = hashlib.sha256(password_bytes).hexdigest()
 
     return pwd_context.hash(password)
@@ -31,7 +29,6 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Verify a password against a hash.
     Handles the same truncation as hash_password.
     """
-    # Apply same truncation logic as hash_password
     password_bytes = plain_password.encode("utf-8")
     if len(password_bytes) > 72:
         plain_password = hashlib.sha256(password_bytes).hexdigest()

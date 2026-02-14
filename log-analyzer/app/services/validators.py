@@ -15,7 +15,6 @@ def validate_log_source_url(url: str) -> Tuple[bool, str]:
     if not url:
         return False, "Log source URL is required"
 
-    # Basic URL format validation
     url_pattern = re.compile(
         r"^https?://"  # http:// or https://
         r"(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|"  # domain...
@@ -29,25 +28,18 @@ def validate_log_source_url(url: str) -> Tuple[bool, str]:
     if not url_pattern.match(url):
         return False, "Invalid URL format. Must start with http:// or https://"
 
-    # Remove trailing slash if present
     url = url.rstrip("/")
 
-    # Try to connect to the log server and verify it's our log server
     try:
-        # First, try root endpoint
         response = requests.get(url, timeout=5)
 
-        # Check if it's our log server by looking for specific response
         if response.status_code == 200:
             try:
                 data = response.json()
 
-                # Check if response has expected fields from our log server
                 if isinstance(data, dict) and "service" in data:
-                    # Verify it's actually a log server (not just any service)
                     service_name = data.get("service", "").lower()
 
-                    # Accept our log-server or any compatible service
                     if "log" in service_name or data.get("status") == "running":
                         return (
                             True,
@@ -111,7 +103,6 @@ def validate_discord_webhook(webhook_url: str) -> Tuple[bool, str]:
     if not webhook_url:
         return False, "Discord webhook URL is required"
 
-    # Check Discord webhook URL format
     discord_pattern = re.compile(
         r"^https://(?:www\.)?(?:discord(?:app)?\.com)/api/webhooks/\d+/[\w-]+$"
     )
@@ -121,12 +112,11 @@ def validate_discord_webhook(webhook_url: str) -> Tuple[bool, str]:
             "Invalid Discord webhook URL format. Expected: https://discord.com/api/webhooks/...",
         )
 
-    # Test webhook by sending a test message
     try:
         response = requests.post(
             webhook_url,
             json={
-                "content": "✅ **Log Analyzer Setup**: Discord webhook verified successfully!",
+                "content": "**Log Analyzer Setup**: Discord webhook verified successfully!",
                 "username": "Log Analyzer",
             },
             timeout=5,

@@ -6,7 +6,6 @@ from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
 
@@ -37,14 +36,13 @@ class DecisionEngine:
             return
 
         self.llm = ChatGroq(
-            model="llama-3.3-70b-versatile",  # Fast and capable model
-            temperature=0.3,  # Lower temperature for more consistent outputs
+            model="llama-3.3-70b-versatile",
+            temperature=0.3,
             api_key=api_key,
         )
 
         self.parser = PydanticOutputParser(pydantic_object=IncidentAnalysis)
 
-        # Prompt template
         self.prompt = ChatPromptTemplate.from_messages(
             [
                 (
@@ -102,12 +100,10 @@ Provide a structured analysis with severity, disposition, summary, next steps, a
             return None
 
         try:
-            # Prepare sample logs (first 3 samples)
             sample_logs = (
                 "\n".join(incident.sample_lines[:3]) if incident.sample_lines else "N/A"
             )
 
-            # Format the prompt
             formatted_prompt = self.prompt.format_messages(
                 format_instructions=self.parser.get_format_instructions(),
                 source=incident.source,
@@ -118,20 +114,17 @@ Provide a structured analysis with severity, disposition, summary, next steps, a
                 sample_logs=sample_logs,
             )
 
-            # Call LLM
             response = self.llm.invoke(formatted_prompt)
 
-            # Parse structured output
             analysis = self.parser.parse(response.content)
 
             return analysis
 
         except Exception as e:
-            print(f"❌ LLM analysis failed: {e}")
+            print(f"LLM analysis failed: {e}")
             return None
 
 
-# Singleton instance
 _decision_engine: Optional[DecisionEngine] = None
 
 

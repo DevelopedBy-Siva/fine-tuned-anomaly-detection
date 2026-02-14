@@ -29,7 +29,7 @@ def load_runbooks() -> List[Runbook]:
     runbooks = []
 
     if not RUNBOOKS_DIR.exists():
-        print(f"⚠️  Runbooks directory not found: {RUNBOOKS_DIR}")
+        print(f"Runbooks directory not found: {RUNBOOKS_DIR}")
         return runbooks
 
     for yaml_file in RUNBOOKS_DIR.glob("*.yaml"):
@@ -39,13 +39,12 @@ def load_runbooks() -> List[Runbook]:
                 runbook = Runbook(data)
                 runbooks.append(runbook)
         except Exception as e:
-            print(f"❌ Failed to load runbook {yaml_file}: {e}")
+            print(f"Failed to load runbook {yaml_file}: {e}")
 
-    print(f"✅ Loaded {len(runbooks)} runbooks")
+    print(f"Loaded {len(runbooks)} runbooks")
     return runbooks
 
 
-# Global runbooks cache (loaded at startup)
 _runbooks_cache: Optional[List[Runbook]] = None
 
 

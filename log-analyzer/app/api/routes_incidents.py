@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from app.services.storage import get_db, Incident, Analysis, Project  # ADD Project here
-from app.models.schemas import IncidentResponse
-from app.api.routes_auth import get_current_project  # Import the dependency
+from app.services.storage import get_db, Incident, Analysis, Project
+from app.api.routes_auth import get_current_project
 
 router = APIRouter()
 
@@ -26,7 +25,6 @@ def list_incidents(
 
     incidents = query.order_by(Incident.last_seen.desc()).limit(limit).all()
 
-    # Format response with analyses
     result = []
     for inc in incidents:
         analysis = (

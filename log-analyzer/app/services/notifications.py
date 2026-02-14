@@ -4,7 +4,6 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
-from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -26,21 +25,19 @@ class NotificationService:
     def send_discord(self, webhook_url: str, incident, analysis) -> bool:
         """Send formatted message to Discord"""
         if not webhook_url:
-            print(f"⚠️  Discord webhook not configured")
+            print(f"Discord webhook not configured")
             return False
 
-        # Determine color based on severity
         color_map = {
-            "critical": 0xFF0000,  # Red
-            "high": 0xFF6B00,  # Orange
-            "medium": 0xFFDD00,  # Yellow
-            "low": 0x00FF00,  # Green
+            "critical": 0xFF0000,
+            "high": 0xFF6B00,
+            "medium": 0xFFDD00,
+            "low": 0x00FF00,
         }
         color = color_map.get(analysis.severity, 0x808080)
 
-        # Build Discord embed
         embed = {
-            "title": f"🚨 {analysis.summary[:100]}",
+            "title": f"{analysis.summary[:100]}",
             "description": analysis.summary,
             "color": color,
             "fields": [
@@ -80,7 +77,6 @@ class NotificationService:
             "footer": {"text": f"Incident ID: {incident.id[:8]}"},
         }
 
-        # Add next steps if available
         if analysis.next_steps:
             steps_text = "\n".join(
                 [f"{i+1}. {step}" for i, step in enumerate(analysis.next_steps[:5])]
@@ -88,12 +84,11 @@ class NotificationService:
             embed["fields"].append(
                 {
                     "name": "🔧 Next Steps",
-                    "value": steps_text[:1024],  # Discord limit
+                    "value": steps_text[:1024],
                     "inline": False,
                 }
             )
 
-        # Add ticket draft for LLM analysis
         if analysis.analysis_source == "llm" and analysis.ticket_title:
             embed["fields"].append(
                 {
@@ -112,13 +107,13 @@ class NotificationService:
         try:
             response = requests.post(webhook_url, json=payload, timeout=10)
             if response.status_code == 204:
-                print(f"✅ Discord notification sent")
+                print(f"Discord notification sent")
                 return True
             else:
-                print(f"❌ Discord failed: {response.status_code}")
+                print(f"Discord failed: {response.status_code}")
                 return False
         except Exception as e:
-            print(f"❌ Discord error: {e}")
+            print(f"Discord error: {e}")
             return False
 
     def send_email(self, incident, analysis) -> bool:
@@ -126,7 +121,7 @@ class NotificationService:
         if not all(
             [self.smtp_host, self.smtp_user, self.smtp_password, self.oncall_email]
         ):
-            print("⚠️  Email not configured")
+            print("Email not configured")
             return False
 
         try:
@@ -135,7 +130,6 @@ class NotificationService:
             msg["From"] = self.smtp_user
             msg["To"] = self.oncall_email
 
-            # Plain text version
             text = f"""
 INCIDENT ALERT: {analysis.disposition}
 
@@ -159,7 +153,6 @@ Incident ID: {incident.id}
 Dashboard: http://localhost:8000/api/dashboard
             """
 
-            # HTML version
             html = f"""
 <html>
 <body style="font-family: Arial, sans-serif; color: #333;">
@@ -212,17 +205,16 @@ Dashboard: http://localhost:8000/api/dashboard
             msg.attach(MIMEText(text, "plain"))
             msg.attach(MIMEText(html, "html"))
 
-            # Send email
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
                 server.starttls()
                 server.login(self.smtp_user, self.smtp_password)
                 server.send_message(msg)
 
-            print(f"✅ Email sent to {self.oncall_email}")
+            print(f"Email sent to {self.oncall_email}")
             return True
 
         except Exception as e:
-            print(f"❌ Email error: {e}")
+            print(f"Email error: {e}")
             return False
 
     def route_notification(self, incident, analysis) -> bool:
@@ -239,8 +231,7 @@ Dashboard: http://localhost:8000/api/dashboard
             return self.send_discord(self.discord_dev_url, incident, analysis)
 
         else:
-            # OBSERVE and NO_ACTION don't send notifications
-            print(f"ℹ️  No notification for {disposition}")
+            print(f"ℹNo notification for {disposition}")
             return False
 
 

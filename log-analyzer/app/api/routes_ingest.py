@@ -30,7 +30,7 @@ def get_project_by_api_key(
 @router.post("/ingest", response_model=IngestResponse)
 def ingest_logs(
     request: IngestRequest,
-    project: Project = Depends(get_project_by_api_key),  # CHANGED
+    project: Project = Depends(get_project_by_api_key),
 ):
     """
     Receive logs, parse them, cluster into incidents, apply runbooks or LLM analysis.
@@ -44,18 +44,14 @@ def ingest_logs(
     notification_service = get_notification_service(project=project)
 
     for log_line in request.logs:
-        # Parse
         parsed = ParsedLog(log_line)
         processed += 1
 
-        # Only process errors/warnings
         if parsed.level not in ["ERROR", "WARN", "WARNING", "CRITICAL"]:
             continue
 
-        # Generate signature
         sig = generate_signature(request.source, parsed)
 
-        # Cluster (now passing project_id)
         incident = cluster_log(
             project_id=project.id,  # ADD THIS
             source=request.source,
@@ -64,21 +60,17 @@ def ingest_logs(
             signature=sig,
         )
 
-        # Analyze incident (only for new or low-count incidents)
         if incident.count <= 3:
             db = SessionLocal()
 
-            # Check if analysis already exists
             existing_analysis = (
                 db.query(Analysis).filter(Analysis.incident_id == incident.id).first()
             )
 
             if not existing_analysis:
-                # Try runbook match first
                 runbook, score = match_runbook(incident)
 
                 if runbook and score >= 0.5:
-                    # High-confidence runbook match
                     disposition = runbook.disposition
                     if disposition == "OBSERVE" and should_escalate(incident, runbook):
                         disposition = runbook.observe_threshold.get(
@@ -100,11 +92,9 @@ def ingest_logs(
                     db.commit()
                     db.refresh(analysis)
 
-                    # Send notification
                     notification_service.route_notification(incident, analysis)
 
                 else:
-                    # No runbook or low confidence - use LLM
                     llm_analysis = decision_engine.analyze_incident(incident)
 
                     if llm_analysis:
@@ -123,12 +113,10 @@ def ingest_logs(
                         db.commit()
                         db.refresh(analysis)
 
-                        # Send notification
                         notification_service.route_notification(incident, analysis)
 
             db.close()
 
-        # Track created vs updated
         if incident.count == 1:
             created.add(incident.id)
         else:

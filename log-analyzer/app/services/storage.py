@@ -36,7 +36,6 @@ class Project(Base):
     name = Column(String, unique=True, nullable=False, index=True)
     password_hash = Column(String, nullable=False)
 
-    # API Key for log ingestion
     api_key = Column(
         String,
         unique=True,
@@ -45,13 +44,10 @@ class Project(Base):
         default=lambda: secrets.token_urlsafe(32),
     )
 
-    # Log source
     log_source_url = Column(String, nullable=False)
 
-    # User contact
     user_email = Column(String, nullable=False)
 
-    # Discord webhooks
     discord_webhook_escalate = Column(String, nullable=False)
     discord_webhook_dev = Column(String, nullable=False)
 
@@ -95,7 +91,7 @@ class Analysis(Base):
 def init_db():
     """Initialize database tables"""
     Base.metadata.create_all(bind=engine)
-    print("✅ Database initialized")
+    print("Database initialized")
 
 
 def get_db():
