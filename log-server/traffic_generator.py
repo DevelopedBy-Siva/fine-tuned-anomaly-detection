@@ -3,6 +3,7 @@ import random
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+
 BASE_URL = "http://localhost:5001"
 
 ENDPOINTS = [
