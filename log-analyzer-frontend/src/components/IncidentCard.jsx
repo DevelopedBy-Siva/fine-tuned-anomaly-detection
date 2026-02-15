@@ -1,7 +1,16 @@
-import React from "react";
-import { AlertCircle, Clock, Hash, CheckCircle, XCircle } from "lucide-react";
+import React, { useState } from "react";
+import {
+  AlertCircle,
+  Clock,
+  Hash,
+  CheckCircle,
+  XCircle,
+  Loader2,
+} from "lucide-react";
 
 function IncidentCard({ incident, analysis, onClose, onIgnore }) {
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const getSeverityColor = (severity) => {
     const severityLower = severity?.toLowerCase();
     if (severityLower === "critical")
@@ -41,6 +50,22 @@ function IncidentCard({ incident, analysis, onClose, onIgnore }) {
     if (count >= 2) return "medium";
     return "low";
   }
+
+  const handleClose = async () => {
+    setIsProcessing(true);
+    try {
+      await onClose(incident.id);
+    } finally {
+    }
+  };
+
+  const handleIgnore = async () => {
+    setIsProcessing(true);
+    try {
+      await onIgnore(incident.id);
+    } finally {
+    }
+  };
 
   return (
     <div className="rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-800">
@@ -136,18 +161,38 @@ function IncidentCard({ incident, analysis, onClose, onIgnore }) {
       {incident.status === "open" && (
         <div className="flex space-x-2">
           <button
-            onClick={() => onClose(incident.id)}
-            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center"
+            onClick={handleClose}
+            disabled={isProcessing}
+            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center disabled:bg-gray-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <CheckCircle size={16} className="mr-1" />
-            Close
+            {isProcessing ? (
+              <>
+                <Loader2 size={16} className="mr-1 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <CheckCircle size={16} className="mr-1" />
+                Close
+              </>
+            )}
           </button>
           <button
-            onClick={() => onIgnore(incident.id)}
-            className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium flex items-center justify-center"
+            onClick={handleIgnore}
+            disabled={isProcessing}
+            className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium flex items-center justify-center disabled:bg-gray-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <XCircle size={16} className="mr-1" />
-            Ignore
+            {isProcessing ? (
+              <>
+                <Loader2 size={16} className="mr-1 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <XCircle size={16} className="mr-1" />
+                Ignore
+              </>
+            )}
           </button>
         </div>
       )}
