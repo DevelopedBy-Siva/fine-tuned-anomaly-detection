@@ -32,7 +32,7 @@ function IncidentCard({ incident, analysis, onClose, onIgnore }) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-200">
+    <div className="rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-800">
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center space-x-3">
@@ -54,50 +54,50 @@ function IncidentCard({ incident, analysis, onClose, onIgnore }) {
         </div>
       </div>
 
-      {/* Sample Log */}
       <div className="bg-gray-900 text-gray-100 p-4 rounded-lg mb-4 overflow-x-auto">
         <code className="text-xs font-mono whitespace-pre-wrap break-all">
           {incident.sample_lines?.[0] || "N/A"}
         </code>
       </div>
 
-      {/* Analysis */}
       {analysis && (
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 border-l-4 border-green-500">
+        <div className="bg-gray-900 rounded-lg p-4 mb-4">
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center">
-              <AlertCircle className="text-green-600 mr-2" size={18} />
-              <span className="font-semibold text-gray-800">
+              <AlertCircle
+                className="text-green-600 mr-2  shrink-0"
+                size={24}
+              />
+              <span className="text-sm font-medium text-gray-400 px-2">
                 {analysis.summary}
               </span>
             </div>
             <span
-              className={`px-2 py-1 rounded text-xs font-bold ${analysis.analysis_source === "runbook" ? "bg-green-100 text-green-800" : "bg-purple-100 text-purple-800"}`}
+              className={`px-3 py-1 whitespace-nowrap rounded text-xs font-bold ${analysis.analysis_source === "runbook" ? "bg-green-100 text-green-800" : "bg-purple-100 text-purple-800"}`}
             >
-              {analysis.analysis_source === "runbook" ? "Runbook" : "AI"}
+              {analysis.analysis_source === "runbook" ? "Runbook" : "✨ AI "}
             </span>
           </div>
 
-          <div className="flex items-center space-x-2 mb-3">
+          <div className="flex items-center space-x-2 mt-5 mb-3">
             <span
-              className={`px-2 py-1 rounded text-xs font-bold ${getDispositionColor(analysis.disposition)}`}
+              className={`px-2 py-1 rounded text-xs font-semibold ${getDispositionColor(analysis.disposition)}`}
             >
               {analysis.disposition}
             </span>
-            <span className="text-xs text-gray-600">
+            <span className="text-xs text-gray-400">
               Confidence: {Math.round(analysis.confidence * 100)}%
             </span>
           </div>
 
-          {/* Next Steps */}
           {analysis.next_steps && analysis.next_steps.length > 0 && (
-            <div className="mt-3">
-              <p className="text-sm font-semibold text-gray-700 mb-2">
+            <div className="mt-5 mb-5">
+              <p className="text-sm font-semibold text-gray-400 mb-2">
                 Next Steps:
               </p>
-              <ol className="list-decimal list-inside space-y-1">
+              <ol className="list-decimal list-inside space-y-2">
                 {analysis.next_steps.slice(0, 3).map((step, idx) => (
-                  <li key={idx} className="text-sm text-gray-600">
+                  <li key={idx} className="text-xs text-gray-400">
                     {step}
                   </li>
                 ))}
@@ -108,13 +108,13 @@ function IncidentCard({ incident, analysis, onClose, onIgnore }) {
           {/* Ticket Draft */}
           {analysis.analysis_source === "llm" && analysis.ticket_title && (
             <div className="mt-4 p-3 bg-pink-50 rounded border border-pink-200">
-              <p className="text-xs font-bold text-pink-800 mb-1">
+              <p className="text-xs font-semibold text-pink-800 mb-1">
                 🎫 Ticket Draft
               </p>
-              <p className="text-sm font-semibold text-gray-800 mb-2">
+              <p className="text-sm font-normal text-gray-800 mb-2">
                 {analysis.ticket_title}
               </p>
-              <p className="text-xs text-gray-600 line-clamp-3">
+              <p className="text-xs text-gray-500 line-clamp-3">
                 {analysis.ticket_body}
               </p>
             </div>
@@ -123,10 +123,10 @@ function IncidentCard({ incident, analysis, onClose, onIgnore }) {
       )}
 
       {/* Signature */}
-      <div className="flex items-center text-xs text-gray-400 mb-4">
+      {/* <div className="flex items-center text-xs text-gray-400 mb-4">
         <Hash size={12} className="mr-1" />
         {incident.signature.substring(0, 16)}...
-      </div>
+      </div> */}
 
       {/* Actions */}
       {incident.status === "open" && (
@@ -149,8 +149,8 @@ function IncidentCard({ incident, analysis, onClose, onIgnore }) {
       )}
 
       {incident.status !== "open" && (
-        <div className="text-center py-2 px-4 bg-gray-100 rounded-lg">
-          <span className="text-sm font-medium text-gray-600">
+        <div className="text-center py-2 px-4 bg-gray-500 rounded-lg">
+          <span className="text-sm font-medium text-gray-200">
             Status: {incident.status.toUpperCase()}
           </span>
         </div>

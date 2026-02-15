@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { incidentsAPI } from "../services/api";
+import { incidentsAPI, authAPI } from "../services/api";
 import Navbar from "./Navbar";
 import IncidentCard from "./IncidentCard";
-import { RefreshCw, Filter, AlertTriangle } from "lucide-react";
+import { RefreshCw, AlertTriangle } from "lucide-react";
+import { Play, Square } from "lucide-react";
 
 function Dashboard() {
   const [incidents, setIncidents] = useState([]);
@@ -12,8 +13,8 @@ function Dashboard() {
     status: "open",
     source: "",
   });
+  const [logServerStatus, setLogServerStatus] = useState("unknown");
 
-  // Replace the fetchIncidents function with this:
   const fetchIncidents = async () => {
     try {
       const response = await incidentsAPI.list(filters);
@@ -28,7 +29,7 @@ function Dashboard() {
 
   useEffect(() => {
     fetchIncidents();
-    const interval = setInterval(fetchIncidents, 5000); // Refresh every 5s
+    const interval = setInterval(fetchIncidents, 5000);
     return () => clearInterval(interval);
   }, [filters]);
 
@@ -53,8 +54,52 @@ function Dashboard() {
   const stats = {
     total: incidents.length,
     highFrequency: incidents.filter((i) => i.count >= 5).length,
-    analyzed: incidents.filter((i) => i.analysis).length, // Changed
+    analyzed: incidents.filter((i) => i.analysis).length,
   };
+
+  const handleStart = async () => {
+    try {
+      setLogServerStatus("unknown");
+      await authAPI.startLogServer();
+      setLogServerStatus("running");
+    } catch (err) {
+      console.error("Failed to start server:", err);
+    }
+  };
+
+  const handleStop = async () => {
+    try {
+      setLogServerStatus("unknown");
+      await authAPI.stopLogServer();
+      setLogServerStatus("idle");
+    } catch (err) {
+      console.error("Failed to stop server:", err);
+    }
+  };
+
+  useEffect(() => {
+    let alive = true;
+
+    const fetchLogServerStatus = async () => {
+      try {
+        const res = await authAPI.statusLogServer();
+        const status = res?.data?.status;
+        if (alive) setLogServerStatus(status || "unknown");
+      } catch (err) {
+        if (alive) setLogServerStatus("unknown"); // or "error"
+        console.error("Failed to fetch log server status:", err);
+      }
+    };
+
+    fetchLogServerStatus();
+
+    const interval = setInterval(fetchLogServerStatus, 5000);
+
+    return () => {
+      alive = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen">
@@ -94,12 +139,7 @@ function Dashboard() {
             <div className="text-sm text-gray-600 mt-2">Analyzed</div>
           </div>
         </div>
-        {/* Filters */}
         <div className="box-bg rounded-lg shadow p-6 mb-8">
-          {/* <div className="flex items-center mb-4">
-            <Filter size={16} className="text-gray-600 mr-2" />
-            <h2 className="text-lg font-medium text-gray-500">Filters</h2>
-          </div> */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -140,13 +180,46 @@ function Dashboard() {
                 className="text-sm bg-transparent w-full px-4 py-2 border border-white/10 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-500  placeholder:text-gray-500"
               />
             </div>
-            <div className="flex items-end">
+            <div className="flex items-end gap-3">
               <button
-                onClick={fetchIncidents}
-                className="text-sm w-full px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors flex items-center justify-center"
+                disabled={
+                  logServerStatus === "unknown" || logServerStatus === "running"
+                }
+                onClick={handleStart}
+                className="
+                    text-sm flex-1 px-4 py-2
+                    bg-sky-500 text-white
+                    rounded-lg flex items-center justify-center
+                    transition-colors
+                    hover:bg-sky-600
+                    disabled:bg-gray-500
+                    disabled:opacity-60
+                    disabled:cursor-not-allowed
+                    disabled:hover:bg-gray-500
+                  "
               >
-                <RefreshCw size={14} className="mr-2" />
-                Refresh
+                <Play size={14} className="mr-2" />
+                Start
+              </button>
+              <button
+                disabled={
+                  logServerStatus === "unknown" || logServerStatus === "idle"
+                }
+                onClick={handleStop}
+                className="
+                    text-sm flex-1 px-4 py-2
+                    bg-red-500 text-white
+                    rounded-lg flex items-center justify-center
+                    transition-colors
+                    hover:bg-red-600
+                    disabled:bg-gray-500
+                    disabled:opacity-60
+                    disabled:cursor-not-allowed
+                    disabled:hover:bg-gray-500
+                  "
+              >
+                <Square size={14} className="mr-2" />
+                Stop
               </button>
             </div>
           </div>
@@ -159,11 +232,11 @@ function Dashboard() {
           </div>
         ) : incidents.length === 0 ? (
           <div className="box-bg text-center py-12  rounded-lg shadow">
-            <AlertTriangle className="text-gray-600 mx-auto mb-2" size={38} />
-            <h3 className="text-xl font-semibold text-gray-800 mb-1">
+            <AlertTriangle className="text-gray-600 mx-auto mb-2" size={34} />
+            <h3 className="text-lg font-medium text-gray-600 mb-1">
               No incidents found
             </h3>
-            <p className="text-gray-700 text-sm">
+            <p className="text-gray-700 text-xs">
               {filters.status || filters.source
                 ? "Try adjusting your filters"
                 : "Start generating logs to see incidents here"}
@@ -182,7 +255,7 @@ function Dashboard() {
             ))}
           </div>
         )}
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-black/70 backdrop-blur px-4 py-4 text-center text-xs text-gray-600">
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-black/70 backdrop-blur px-4 py-4 text-center text-xs text-gray-400">
           <RefreshCw size={14} className="inline mr-2" />
           Auto-refreshing every 5 seconds
         </div>

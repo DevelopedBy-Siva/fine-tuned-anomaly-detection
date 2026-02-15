@@ -28,6 +28,9 @@ export const authAPI = {
   login: (data) => api.post("/api/auth/login", data),
   getMe: () => api.get("/api/auth/me"),
   updateSettings: (data) => api.put("/api/auth/settings", data),
+  startLogServer: () => api.post("/api/auth/log-server/start"),
+  stopLogServer: () => api.post("/api/auth/log-server/stop"),
+  statusLogServer: () => api.get("/api/auth/log-server/status"),
 
   // Validation endpoints
   validateUrl: (url) => api.post("/api/auth/validate/url", { url }),
