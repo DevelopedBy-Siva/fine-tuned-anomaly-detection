@@ -208,18 +208,33 @@ def login_project(credentials: ProjectLogin, db: Session = Depends(get_db)):
         {"project_id": project.id, "project_name": project.name}
     )
 
+    webhook_1 = (
+        "HIDDEN: TEST DATA NOT ALLOWED TO EDIT"
+        if project.is_test
+        else project.discord_webhook_escalate
+    )
+
+    webhook_2 = (
+        "HIDDEN: TEST DATA NOT ALLOWED TO EDIT"
+        if project.is_test
+        else project.discord_webhook_dev
+    )
+
+    api_key = "HIDDEN: TEST API KEY" if project.is_test else project.api_key
+
     return {
         "access_token": token,
         "token_type": "bearer",
         "project": {
             "id": project.id,
             "name": project.name,
-            "api_key": project.api_key,
+            "api_key": api_key,
             "log_source_url": project.log_source_url,
             "user_email": project.user_email,
-            "discord_webhook_escalate": project.discord_webhook_escalate,
-            "discord_webhook_dev": project.discord_webhook_dev,
+            "discord_webhook_escalate": webhook_1,
+            "discord_webhook_dev": webhook_2,
             "created_at": project.created_at.isoformat(),
+            "is_test": project.is_test,
         },
     }
 
@@ -252,14 +267,28 @@ def get_current_project(
 @router.get("/me")
 def get_current_project_info(project: Project = Depends(get_current_project)):
     """Get current project info"""
+    webhook_1 = (
+        "HIDDEN: TEST DATA NOT ALLOWED TO EDIT"
+        if project.is_test
+        else project.discord_webhook_escalate
+    )
+
+    webhook_2 = (
+        "HIDDEN: TEST DATA NOT ALLOWED TO EDIT"
+        if project.is_test
+        else project.discord_webhook_dev
+    )
+
+    api_key = "HIDDEN: TEST API KEY" if project.is_test else project.api_key
+
     return {
         "id": project.id,
         "name": project.name,
-        "api_key": project.api_key,
+        "api_key": api_key,
         "log_source_url": project.log_source_url,
         "user_email": project.user_email,
-        "discord_webhook_escalate": project.discord_webhook_escalate,
-        "discord_webhook_dev": project.discord_webhook_dev,
+        "discord_webhook_escalate": webhook_1,
+        "discord_webhook_dev": webhook_2,
         "created_at": project.created_at.isoformat(),
     }
 
@@ -271,6 +300,8 @@ def update_project_settings(
     db: Session = Depends(get_db),
 ):
     """Update project settings"""
+    if project.is_test:
+        return {"message": "Test server is not allowed to edit"}
 
     errors = []
 
