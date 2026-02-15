@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { incidentsAPI, authAPI } from "../services/api";
 import Navbar from "./Navbar";
 import IncidentCard from "./IncidentCard";
@@ -16,9 +16,15 @@ function Dashboard() {
   const [logServerStatus, setLogServerStatus] = useState("unknown");
   const [showNotice, setShowNotice] = useState(true);
 
+  const filtersRef = useRef(filters);
+
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
+
   const fetchIncidents = async () => {
     try {
-      const response = await incidentsAPI.list(filters);
+      const response = await incidentsAPI.list(filtersRef.current);
       const incidentsList = response.data;
       setIncidents(incidentsList);
     } catch (err) {
@@ -29,7 +35,9 @@ function Dashboard() {
   };
 
   useEffect(() => {
+    setLoading(true);
     fetchIncidents();
+
     const interval = setInterval(fetchIncidents, 5000);
     return () => clearInterval(interval);
   }, [filters]);
