@@ -59,7 +59,7 @@ function App() {
     <div className="server-loading">
       {status.serverA === "pending" || status.serverB === "pending" ? (
         <>
-          <span class="loader"></span>
+          <span className="loader"></span>
           <p>
             Please allow a few seconds for everything to initialize, as the
             servers are on free instances.
@@ -121,13 +121,15 @@ function App() {
         <Route
           path="*"
           element={
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <div className="min-h-screen flex items-center justify-center">
               <div className="text-center">
-                <h1 className="text-6xl font-bold text-gray-800 mb-4">404</h1>
-                <p className="text-gray-600 mb-8">Page not found</p>
+                <h1 className="text-7xl font-semibold text-gray-400 mb-4">
+                  404
+                </h1>
+                <p className="text-gray-400 mb-10">Page not available.</p>
                 <a
                   href="/dashboard"
-                  className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  className="text-sm px-8 py-3 bg-sky-500 text-white font-normal rounded-lg hover:bg-sky-600"
                 >
                   Go to Dashboard
                 </a>

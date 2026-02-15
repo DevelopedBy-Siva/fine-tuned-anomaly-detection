@@ -3,7 +3,7 @@ import axios from "axios";
 export const API_BASE_URL =
   process.env.REACT_APP_API_URL || "http://localhost:8000";
 export const TEST_LOG_SERVER_URL =
-  process.env.REACT_APP_TEST_LOG_SERVER_URL || "http://localhost:5000";
+  process.env.REACT_APP_TEST_LOG_SERVER_URL || "http://localhost:5001";
 
 // Create axios instance
 const api = axios.create({

@@ -6,6 +6,10 @@ from contextlib import asynccontextmanager
 from app.services.storage import init_db
 from app.api import routes_ingest, routes_incidents, routes_auth
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

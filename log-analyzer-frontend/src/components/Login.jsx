@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authAPI } from "../services/api";
 import { AlertCircle } from "lucide-react";
+import { Activity } from "lucide-react";
 
 function Login() {
   const navigate = useNavigate();
@@ -42,13 +43,13 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+    <div className="min-h-screen flex items-center justify-center p-4 pt-20 relative">
+      <div className="absolute top-6 left-6 flex items-center">
+        <Activity className="text-sky-500 mr-2" size={28} />
+      </div>
+      <div className="rounded-2xl shadow-2xl w-full max-w-md p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Welcome Back
-          </h1>
-          <p className="text-gray-600">Login to your project</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Login</h1>
         </div>
 
         {error && (
@@ -63,7 +64,7 @@ function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-normal text-gray-400 mb-2">
               Project Name
             </label>
             <input
@@ -71,14 +72,14 @@ function Login() {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="text-sm w-full px-4 py-3 bg-transparent text-gray-100 border border-white/20 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 placeholder:text-gray-500"
               placeholder="my-awesome-project"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-normal text-gray-400 mb-2">
               Password
             </label>
             <input
@@ -86,19 +87,20 @@ function Login() {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-4 py-3 bg-transparent text-gray-100 border border-white/20 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 placeholder:text-gray-500"
               placeholder="••••••••"
               required
+              autoComplete="new-password"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-3 rounded-lg font-semibold text-white transition-colors ${
+            className={`w-full py-3 rounded-lg text-sm font-medium text-white transition-colors ${
               loading
                 ? "bg-gray-400 cursor-not-allowed"
-                : "bg-indigo-600 hover:bg-indigo-700"
+                : "bg-sky-500 hover:bg-sky-600"
             }`}
           >
             {loading ? "Logging in..." : "Login"}
@@ -109,7 +111,7 @@ function Login() {
           Don't have a project?{" "}
           <Link
             to="/register"
-            className="text-indigo-600 hover:text-indigo-700 font-semibold"
+            className="text-sky-500 hover:text-sky-600 font-medium"
           >
             Create one here
           </Link>

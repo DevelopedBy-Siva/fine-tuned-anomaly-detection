@@ -9,10 +9,19 @@ body {
     "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: #000;
 }
 
 html {
   overscroll-behavior: none;
+}
+
+.box-bg {
+  background: #000;
+}
+
+.box-bg-color {
+  background: #cbe7ee;
 }
 
 code {
@@ -23,7 +32,6 @@ code {
 .server-loading {
   width: 100%;
   min-height: 100vh;
-  background: #0d1116;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -44,32 +52,34 @@ code {
   font-size: 48px;
   transform: translateY(15px);
 }
-
 .loader {
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
   display: inline-block;
   position: relative;
   border: 3px solid;
-  border-color: #de3500 #0000 #fff #0000;
+  border-color: #0284c7 transparent #fff transparent;
   border-radius: 50%;
   box-sizing: border-box;
   animation: 1s rotate linear infinite;
 }
+
 .loader:before,
 .loader:after {
   content: "";
   top: 0;
   left: 0;
   position: absolute;
-  border: 10px solid transparent;
+  border: 9px solid transparent; /* 10 × 0.875 ≈ 9 */
   border-bottom-color: #fff;
-  transform: translate(-10px, 19px) rotate(-35deg);
+  transform: translate(-9px, 17px) rotate(-35deg);
 }
+
 .loader:after {
-  border-color: #de3500 #0000 #0000 #0000;
-  transform: translate(32px, 3px) rotate(-35deg);
+  border-color: #0284c7 transparent transparent transparent;
+  transform: translate(28px, 3px) rotate(-35deg);
 }
+
 @keyframes rotate {
   100% {
     transform: rotate(360deg);

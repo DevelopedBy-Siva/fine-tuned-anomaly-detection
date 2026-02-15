@@ -7,6 +7,9 @@ import os
 from datetime import datetime
 import requests
 from collections import deque
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="Log Server")
 
