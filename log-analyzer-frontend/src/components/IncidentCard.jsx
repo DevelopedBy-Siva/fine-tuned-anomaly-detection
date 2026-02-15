@@ -2,18 +2,19 @@ import React from "react";
 import { AlertCircle, Clock, Hash, CheckCircle, XCircle } from "lucide-react";
 
 function IncidentCard({ incident, analysis, onClose, onIgnore }) {
-  const getSeverityColor = (count) => {
-    if (count >= 10) return "bg-red-100 text-red-800 border-red-300";
-    if (count >= 5) return "bg-orange-100 text-orange-800 border-orange-300";
-    if (count >= 2) return "bg-yellow-100 text-yellow-800 border-yellow-300";
+  const getSeverityColor = (severity) => {
+    const severityLower = severity?.toLowerCase();
+    if (severityLower === "critical")
+      return "bg-red-100 text-red-800 border-red-300";
+    if (severityLower === "high")
+      return "bg-orange-100 text-orange-800 border-orange-300";
+    if (severityLower === "medium")
+      return "bg-yellow-100 text-yellow-800 border-yellow-300";
     return "bg-green-100 text-green-800 border-green-300";
   };
 
-  const getSeverityLabel = (count) => {
-    if (count >= 10) return "CRITICAL";
-    if (count >= 5) return "HIGH";
-    if (count >= 2) return "MEDIUM";
-    return "LOW";
+  const getSeverityLabel = (severity) => {
+    return severity?.toUpperCase() || "UNKNOWN";
   };
 
   const getDispositionColor = (disposition) => {
@@ -31,14 +32,24 @@ function IncidentCard({ incident, analysis, onClose, onIgnore }) {
     return new Date(timestamp).toLocaleTimeString();
   };
 
+  const displaySeverity =
+    analysis?.severity || getFallbackSeverity(incident.count);
+
+  function getFallbackSeverity(count) {
+    if (count >= 10) return "critical";
+    if (count >= 5) return "high";
+    if (count >= 2) return "medium";
+    return "low";
+  }
+
   return (
     <div className="rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-800">
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center space-x-3">
           <span
-            className={`px-3 py-1 rounded-full text-xs font-bold border ${getSeverityColor(incident.count)}`}
+            className={`px-3 py-1 rounded-full text-xs font-bold border ${getSeverityColor(displaySeverity)}`}
           >
-            {getSeverityLabel(incident.count)}
+            {getSeverityLabel(displaySeverity)}
           </span>
           <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium">
             {incident.source}
@@ -104,7 +115,7 @@ function IncidentCard({ incident, analysis, onClose, onIgnore }) {
             </div>
           )}
 
-          {analysis.analysis_source === "llm" && analysis.ticket_title && (
+          {analysis.ticket_title && (
             <div className="mt-4 p-3 bg-pink-50 rounded border border-pink-200">
               <p className="text-xs font-semibold text-pink-800 mb-1">
                 🎫 Ticket Draft
@@ -112,18 +123,15 @@ function IncidentCard({ incident, analysis, onClose, onIgnore }) {
               <p className="text-sm font-normal text-gray-800 mb-2">
                 {analysis.ticket_title}
               </p>
-              <p className="text-xs text-gray-500 line-clamp-3">
-                {analysis.ticket_body}
-              </p>
+              {analysis.ticket_body && (
+                <p className="text-xs text-gray-500 line-clamp-3">
+                  {analysis.ticket_body}
+                </p>
+              )}
             </div>
           )}
         </div>
       )}
-
-      {/* <div className="flex items-center text-xs text-gray-400 mb-4">
-        <Hash size={12} className="mr-1" />
-        {incident.signature.substring(0, 16)}...
-      </div> */}
 
       {incident.status === "open" && (
         <div className="flex space-x-2">
