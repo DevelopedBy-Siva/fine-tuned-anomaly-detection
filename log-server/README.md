@@ -1,153 +1,186 @@
 # Log Server
 
-A FastAPI service that simulates a production API with **realistic errors** and **variable latency**. It writes structured log lines (including errors and warnings) to a file and console, intended for generating training or evaluation data for log-based anomaly detection.
+A FastAPI service that generates realistic style logs with errors and warnings, then ships them to a Log Analyzer service for anomaly detection and incident management.
 
 ## Overview
 
-- **API server** — Multiple endpoints that randomly return errors, slow responses, or success.
-- **Error patterns** — Production-style messages (DB timeouts, NPEs, Redis/cache, payment, auth, external services, etc.).
-- **Traffic generator** — Optional script to hit the server continuously so logs accumulate.
-- **Log shipper** — Tails `logs/app.log` and sends batches to the Log Analyzer’s ingest API.
+- **In-memory log generation** — Produces structured log lines with realistic error patterns, warnings, and info messages
+- **Automatic log shipping** — Batches and sends logs to the Log Analyzer service via HTTP API
+- **Realistic-style errors** — Database timeouts, NullPointerExceptions, Redis failures, payment errors, authentication issues, and more
+- **API control** — Start, stop, and monitor log generation via REST endpoints
+- **Statistics tracking** — Real-time metrics on logs generated, shipped, and incidents created
 
-## Project structure
+## Architecture
 
-| File                   | Description                                                                        |
-| ---------------------- | ---------------------------------------------------------------------------------- |
-| `main.py`              | FastAPI app and route definitions; injects errors and slow requests.               |
-| `error_patterns.py`    | `ErrorPatterns` class and `ERROR_GENERATORS` — realistic error message generators. |
-| `logger_config.py`     | Logger setup: file (`logs/app.log`) and console with ISO timestamps.               |
-| `traffic_generator.py` | Script to send random requests to the server for load/log generation.              |
-| `log_shipper.py`       | Tails `logs/app.log` and POSTs batches to the Log Analyzer at `/api/ingest`.       |
-| `requirements.txt`     | Python dependencies.                                                               |
+The log server generates logs in-memory (no file I/O) and ships them directly to the analyzer service. Logs are buffered up to 20 lines, then sent in batches of 10+ to the analyzer's ingest endpoint.
+
+## Project Structure
+
+```
+log-server/
+├── server.py           # FastAPI app with log generation and shipping
+├── requirements.txt    # Python dependencies
+├── Dockerfile         # Container configuration
+└── README.md          # This file
+```
 
 ## Setup
+
+### Environment Variables
+
+Create a `.env` file in the `log-server` directory:
+
+```env
+ANALYZER_URL=http://localhost:8000/api/ingest
+LOGSHIPPER_API_KEY=your_api_key_here
+CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+```
+
+- **ANALYZER_URL** — Log Analyzer ingest endpoint (required)
+- **LOGSHIPPER_API_KEY** — API key for authenticating with this server (required)
+- **CORS_ORIGINS** — Comma-separated list of allowed frontend origins (required)
+
+### Local Development
 
 ```bash
 cd log-server
 python -m venv .venv
-source .venv/bin/activate
-# Windows: .venv\Scripts\activate
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## Full workflow (4 terminals)
-
-Run in this order. The **Log Analyzer** and **Log Server** must be running before the traffic generator and log shipper.
-
-| Terminal | Component             | Command                                                | Port / URL                  |
-| -------- | --------------------- | ------------------------------------------------------ | --------------------------- |
-| 1        | **Log Analyzer**      | (already running)                                      | 8000                        |
-| 2        | **Log Server**        | `uvicorn main:app --host 0.0.0.0 --port 5001 --reload` | 5001                        |
-| 3        | **Traffic Generator** | `python traffic_generator.py`                          | hits 5001                   |
-| 4        | **Log Shipper**       | `python log_shipper.py`                                | tails `logs/app.log` → 8000 |
-
-## Running the server
-
-Start the Log Server on port 5001 (required by the traffic generator):
+### Running the Server
 
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 5001 --reload
+uvicorn server:app --host 0.0.0.0 --port 5001 --reload
 ```
 
-- **Root:** [http://localhost:5001/](http://localhost:5001/) — service info
-- **Docs:** [http://localhost:5001/docs](http://localhost:5001/docs) — Swagger UI
+- **Root:** http://localhost:5001/ — Service info
+- **Docs:** http://localhost:5001/docs — Swagger UI
+- **Health:** http://localhost:5001/health — Health check
 
-## Generating traffic and logs
-
-In a separate terminal (with the same venv):
+### Docker
 
 ```bash
-cd ~/Desktop/fine-tuned-anomaly-detection/log-server
-source .venv/bin/activate
-python traffic_generator.py
+docker build -t log-server .
+docker run -p 5001:5001 --env-file .env log-server
 ```
 
-You should see:
+## API Endpoints
 
-```
-Generating traffic for 300s at 3 req/s
-Press Ctrl+C to stop
+All endpoints except `/` and `/health` require the `X-API-Key` header.
 
-[20s] Sent 60 requests
-[40s] Sent 120 requests
-...
-```
+| Method | Path          | Auth Required | Description                                 |
+| ------ | ------------- | ------------- | ------------------------------------------- |
+| GET    | `/`           | No            | Service information and endpoint list       |
+| GET    | `/health`     | No            | Health check                                |
+| POST   | `/api/start`  | Yes           | Start log generation (runs for 300 seconds) |
+| POST   | `/api/stop`   | Yes           | Stop log generation and return statistics   |
+| GET    | `/api/status` | Yes           | Get current status and statistics           |
 
-This sends random requests to `http://localhost:5001` for 5 minutes at 3 requests/second. Adjust `BASE_URL` in `traffic_generator.py` if you run the server on a different host/port.
+### Example Usage
 
-Logs are written to:
-
-- **File:** `logs/app.log`
-- **Console:** stdout of the server process
-
-## Log Shipper
-
-The log shipper tails `logs/app.log` and POSTs batches to the Log Analyzer’s ingest API (`http://localhost:8000/api/ingest`). **Start the Log Analyzer (port 8000) before running the log shipper.**
-
-In a separate terminal:
+**Start log generation:**
 
 ```bash
-cd ~/Desktop/fine-tuned-anomaly-detection/log-server
-source .venv/bin/activate
-python log_shipper.py
+curl -X POST http://localhost:5001/api/start \
+  -H "X-API-Key: your_api_key_here"
 ```
 
-You should see:
+**Check status:**
 
-```
-Tailing logs/app.log → http://localhost:8000/api/ingest
-Batch size: 10, Poll interval: 2s
-
-Shipped 15 logs | Created: 3 | Updated: 0
-Shipped 12 logs | Created: 1 | Updated: 4
-Shipped 18 logs | Created: 0 | Updated: 5
-...
+```bash
+curl http://localhost:5001/api/status \
+  -H "X-API-Key: your_api_key_here"
 ```
 
-- **Batch size:** 10 (configurable via `BATCH_SIZE` in `log_shipper.py`)
-- **Poll interval:** 2 seconds
-- **Payload:** `{"source": "log-server", "environment": "prod", "logs": [...]}`
+**Stop generation:**
 
-If the analyzer is not running, you’ll see: `Cannot connect to analyzer. Is it running on port 8000?`
+```bash
+curl -X POST http://localhost:5001/api/stop \
+  -H "X-API-Key: your_api_key_here"
+```
 
-## API endpoints
+## How It Works
 
-| Method | Path                     | Behavior                                               |
-| ------ | ------------------------ | ------------------------------------------------------ |
-| GET    | `/`                      | Service info                                           |
-| GET    | `/api/users/{user_id}`   | User lookup; may error or be slow                      |
-| POST   | `/api/orders`            | Order creation; extra chance of payment errors         |
-| POST   | `/api/upload`            | File upload; may trigger file-not-found style errors   |
-| GET    | `/api/cache/{key}`       | Cache lookup; may trigger Redis-style errors           |
-| POST   | `/api/external/notify`   | External notification; may trigger dependency failures |
-| GET    | `/api/health`            | Health check; rarely fails                             |
-| POST   | `/internal/cron/cleanup` | Simulated cron job; DB/timeout/OOM style errors        |
+### Log Generation
 
-Rates (tunable in `main.py`):
+When started, the log server:
 
-- **Base error rate:** 15% (`ERROR_RATE`)
-- **Slow request rate:** 5% (`SLOW_REQUEST_RATE`)
-- Some routes have additional route-specific error probabilities.
+1. Generates 3 log entries per second
+2. Buffers logs in-memory (max 20 entries)
+3. Ships logs in batches of 10+ to the analyzer every second
+4. Runs for 300 seconds (5 minutes) by default
+5. Ships any remaining logs when stopped or finished
 
-## Error types (from `error_patterns.py`)
+### Error Patterns
 
-- Database timeouts and SQL syntax errors
-- NullPointerException-style stack traces
-- Redis connection/timeout/readonly
-- API rate limits (e.g. Stripe, SendGrid, Twilio)
-- Payment failures (card declined, insufficient funds, etc.)
-- File not found
-- Out of memory (heap)
-- Authentication (token expired, invalid signature, etc.)
-- External service down (HTTP 5xx)
+The server simulates 10 types of production errors with a 15% error rate:
+
+- **Database timeouts** — Connection timeouts to various DB hosts (30-60s)
+- **NullPointerException** — Java-style NPEs with stack traces
+- **Redis connection failures** — Connection refused, timeouts, readonly replicas
+- **API rate limits** — Third-party API throttling (Stripe, SendGrid, Twilio, AWS S3)
+- **Payment failures** — Card declined, insufficient funds, expired cards, CVV mismatches
+- **File not found** — Missing upload files
+- **Out of memory** — Java heap space exhaustion
+- **Authentication failures** — Token expired, invalid signatures, revoked tokens
+- **External service errors** — HTTP 500/502/503/504 from internal services
+- **SQL syntax errors** — Missing tables and query failures
+
+### Warning Patterns
+
+5% of logs are slow request warnings (2-5 second delays).
+
+### Info Patterns
+
+80% of logs are normal operational messages:
+
+- User lookups
+- Order creation
+- File uploads
+- Cache hits
+- Health checks
+
+## Statistics
+
+The server tracks:
+
+- **logs_generated** — Total logs created
+- **logs_shipped** — Total logs successfully sent to analyzer
+- **incidents_created** — New incidents created by analyzer
+- **incidents_updated** — Existing incidents updated
+
+Statistics are returned when stopping the server or checking status.
 
 ## Dependencies
 
-- **fastapi** — Web framework
-- **uvicorn** — ASGI server
-- **requests** — Used by `traffic_generator.py` and `log_shipper.py`
-- **python-multipart** — File upload support
+```
+fastapi==0.109.0
+requests==2.31.0
+python-multipart==0.0.22
+uvicorn[standard]==0.27.0
+python-dotenv==1.0.0
+```
 
-## Use case
+## Configuration
 
-Use this server to produce log streams that mix normal and anomalous behavior (errors, slowness, varied messages). The output in `logs/app.log` can be used for training or evaluating log-based anomaly detection or fine-tuned models.
+### Tunable Parameters (in `server.py`)
+
+- **ERROR_RATE** — Probability of generating an error log (default: 0.15)
+- **SLOW_REQUEST_RATE** — Probability of generating a slow request warning (default: 0.05)
+- **Log buffer size** — Maximum in-memory logs before forced shipping (default: 20)
+- **Batch size** — Minimum logs before shipping (default: 10)
+- **Generation interval** — Time between log generation cycles (default: 1 second)
+- **Run duration** — How long generation runs when started (default: 300 seconds)
+
+## Use Case
+
+This server is designed for:
+
+- Testing log-based anomaly detection systems
+- Generating training data for incident detection models
+- Simulating production log patterns for evaluation
+- Demonstrating real-time log analysis and incident management
+
+The output is consumed by the Log Analyzer service, which detects patterns, creates incidents, and provides incident management capabilities.
