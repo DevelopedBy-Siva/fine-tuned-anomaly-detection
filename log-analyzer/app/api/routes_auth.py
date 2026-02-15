@@ -57,7 +57,7 @@ class ProjectLogin(BaseModel):
 class ProjectResponse(BaseModel):
     id: str
     name: str
-    api_key: str  # ADD THIS
+    api_key: str
     log_source_url: str
     user_email: str
     discord_webhook_escalate: str
@@ -78,7 +78,7 @@ class ValidationResponse(BaseModel):
 def validate_log_url(data: dict):
     """Validate log source URL by actually connecting to it"""
     url = data.get("url", "")
-    is_valid, message = validate_log_source_url(url)  # Changed from validate_url
+    is_valid, message = validate_log_source_url(url)
 
     return {"field": "log_source_url", "is_valid": is_valid, "message": message}
 
@@ -126,64 +126,70 @@ def validate_user_email(data: dict):
 def register_project(project: ProjectCreate, db: Session = Depends(get_db)):
     """Create a new project with full validation"""
 
-    existing = db.query(Project).filter(Project.name == project.name).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Project name already exists")
+    try:
 
-    errors = []
+        existing = db.query(Project).filter(Project.name == project.name).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Project name already exists")
 
-    url_valid, url_msg = validate_log_source_url(project.log_source_url)  # Changed
-    if not url_valid:
-        errors.append({"field": "log_source_url", "message": url_msg})
+        errors = []
 
-    email_valid, email_msg = validate_email(project.user_email)
-    if not email_valid:
-        errors.append({"field": "user_email", "message": email_msg})
+        url_valid, url_msg = validate_log_source_url(project.log_source_url)
+        if not url_valid:
+            errors.append({"field": "log_source_url", "message": url_msg})
 
-    escalate_valid, escalate_msg = validate_discord_webhook(
-        project.discord_webhook_escalate
-    )
-    if not escalate_valid:
-        errors.append({"field": "discord_webhook_escalate", "message": escalate_msg})
+        email_valid, email_msg = validate_email(project.user_email)
+        if not email_valid:
+            errors.append({"field": "user_email", "message": email_msg})
 
-    dev_valid, dev_msg = validate_discord_webhook(project.discord_webhook_dev)
-    if not dev_valid:
-        errors.append({"field": "discord_webhook_dev", "message": dev_msg})
+        escalate_valid, escalate_msg = validate_discord_webhook(
+            project.discord_webhook_escalate
+        )
+        if not escalate_valid:
+            errors.append(
+                {"field": "discord_webhook_escalate", "message": escalate_msg}
+            )
 
-    if errors:
-        raise HTTPException(status_code=400, detail={"errors": errors})
+        dev_valid, dev_msg = validate_discord_webhook(project.discord_webhook_dev)
+        if not dev_valid:
+            errors.append({"field": "discord_webhook_dev", "message": dev_msg})
 
-    new_project = Project(
-        name=project.name,
-        password_hash=hash_password(project.password),
-        log_source_url=project.log_source_url,
-        user_email=project.user_email,
-        discord_webhook_escalate=project.discord_webhook_escalate,
-        discord_webhook_dev=project.discord_webhook_dev,
-    )
+        if errors:
+            raise HTTPException(status_code=400, detail={"errors": errors})
 
-    db.add(new_project)
-    db.commit()
-    db.refresh(new_project)
+        new_project = Project(
+            name=project.name,
+            password_hash=hash_password(project.password),
+            log_source_url=project.log_source_url,
+            user_email=project.user_email,
+            discord_webhook_escalate=project.discord_webhook_escalate,
+            discord_webhook_dev=project.discord_webhook_dev,
+        )
 
-    token = create_access_token(
-        {"project_id": new_project.id, "project_name": new_project.name}
-    )
+        db.add(new_project)
+        db.commit()
+        db.refresh(new_project)
 
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-        "project": {
-            "id": new_project.id,
-            "name": new_project.name,
-            "api_key": new_project.api_key,  # ADD THIS
-            "log_source_url": new_project.log_source_url,
-            "user_email": new_project.user_email,
-            "discord_webhook_escalate": new_project.discord_webhook_escalate,
-            "discord_webhook_dev": new_project.discord_webhook_dev,
-            "created_at": new_project.created_at.isoformat(),
-        },
-    }
+        token = create_access_token(
+            {"project_id": new_project.id, "project_name": new_project.name}
+        )
+
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "project": {
+                "id": new_project.id,
+                "name": new_project.name,
+                "api_key": new_project.api_key,
+                "log_source_url": new_project.log_source_url,
+                "user_email": new_project.user_email,
+                "discord_webhook_escalate": new_project.discord_webhook_escalate,
+                "discord_webhook_dev": new_project.discord_webhook_dev,
+                "created_at": new_project.created_at.isoformat(),
+            },
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/login")
@@ -210,7 +216,7 @@ def login_project(credentials: ProjectLogin, db: Session = Depends(get_db)):
         "project": {
             "id": project.id,
             "name": project.name,
-            "api_key": project.api_key,  # ADD THIS
+            "api_key": project.api_key,
             "log_source_url": project.log_source_url,
             "user_email": project.user_email,
             "discord_webhook_escalate": project.discord_webhook_escalate,

@@ -152,7 +152,7 @@ function Register() {
               required
               minLength={3}
               maxLength={50}
-              pattern="[a-zA-Z0-9_-]+"
+              pattern="[-a-zA-Z0-9_]+"
               title="Only letters, numbers, hyphens, and underscores"
             />
             <p className="text-xs text-gray-500 mt-1">
