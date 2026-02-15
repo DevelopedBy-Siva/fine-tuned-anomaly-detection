@@ -10,7 +10,8 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     status: "open",
-    source: "",
+    severity: "",
+    ticket_title: "",
   });
   const [logServerStatus, setLogServerStatus] = useState("unknown");
   const [showNotice, setShowNotice] = useState(true);
@@ -86,7 +87,7 @@ function Dashboard() {
         const status = res?.data?.status;
         if (alive) setLogServerStatus(status || "unknown");
       } catch (err) {
-        if (alive) setLogServerStatus("unknown"); // or "error"
+        if (alive) setLogServerStatus("unknown");
         console.error("Failed to fetch log server status:", err);
       }
     };
@@ -170,7 +171,7 @@ function Dashboard() {
           </div>
         </div>
         <div className="box-bg rounded-lg shadow p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Status
@@ -198,16 +199,44 @@ function Dashboard() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Source
+                Severity
+              </label>
+              <select
+                value={filters.severity}
+                onChange={(e) =>
+                  setFilters({ ...filters, severity: e.target.value })
+                }
+                className={`text-sm bg-transparent w-full px-4 py-2 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-gray-500`}
+              >
+                <option value="" className="bg-black text-gray-400">
+                  All
+                </option>
+                <option value="critical" className="bg-black text-gray-400">
+                  Critical
+                </option>
+                <option value="high" className="bg-black text-gray-400">
+                  High
+                </option>
+                <option value="medium" className="bg-black text-gray-400">
+                  Medium
+                </option>
+                <option value="low" className="bg-black text-gray-400">
+                  Low
+                </option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ticket Title
               </label>
               <input
                 type="text"
-                value={filters.source}
+                value={filters.ticket_title}
                 onChange={(e) =>
-                  setFilters({ ...filters, source: e.target.value })
+                  setFilters({ ...filters, ticket_title: e.target.value })
                 }
-                placeholder="Filter by source..."
-                className="text-sm bg-transparent w-full px-4 py-2 border border-white/10 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-500  placeholder:text-gray-500"
+                placeholder="Search ticket title..."
+                className="text-sm bg-transparent w-full px-4 py-2 border border-white/10 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-500 placeholder:text-gray-500"
               />
             </div>
             <div className="flex items-end gap-3">
@@ -261,13 +290,13 @@ function Dashboard() {
             <p className="text-gray-600 py-4 text-sm">Loading incidents...</p>
           </div>
         ) : incidents.length === 0 ? (
-          <div className="box-bg text-center py-12  rounded-lg shadow">
+          <div className="box-bg text-center py-12 rounded-lg shadow">
             <AlertTriangle className="text-gray-600 mx-auto mb-2" size={34} />
             <h3 className="text-lg font-medium text-gray-600 mb-1">
               No incidents found
             </h3>
             <p className="text-gray-700 text-xs">
-              {filters.status || filters.source
+              {filters.status || filters.severity || filters.ticket_title
                 ? "Try adjusting your filters"
                 : "Start generating logs to see incidents here"}
             </p>

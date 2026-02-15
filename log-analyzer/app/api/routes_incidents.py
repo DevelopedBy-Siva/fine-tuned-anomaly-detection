@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Optional
 from app.services.storage import get_db, Incident, Analysis, Project
 from app.api.routes_auth import get_current_project
@@ -10,7 +11,8 @@ router = APIRouter()
 @router.get("/incidents")
 def list_incidents(
     status: Optional[str] = None,
-    source: Optional[str] = None,
+    severity: Optional[str] = None,
+    ticket_title: Optional[str] = None,
     limit: int = 50,
     project: Project = Depends(get_current_project),
     db: Session = Depends(get_db),
@@ -20,8 +22,28 @@ def list_incidents(
 
     if status:
         query = query.filter(Incident.status == status)
-    if source:
-        query = query.filter(Incident.source.contains(source))
+
+    if severity or ticket_title:
+        query = query.join(Analysis, Incident.id == Analysis.incident_id)
+
+        if severity:
+            query = query.filter(Analysis.severity == severity)
+
+        if ticket_title:
+            query = query.filter(Analysis.ticket_title.contains(ticket_title))
+
+        subquery = (
+            db.query(
+                Analysis.incident_id, func.max(Analysis.created_at).label("max_created")
+            )
+            .group_by(Analysis.incident_id)
+            .subquery()
+        )
+        query = query.join(
+            subquery,
+            (Analysis.incident_id == subquery.c.incident_id)
+            & (Analysis.created_at == subquery.c.max_created),
+        )
 
     incidents = query.order_by(Incident.last_seen.desc()).limit(limit).all()
 
