@@ -290,6 +290,7 @@ def get_current_project_info(project: Project = Depends(get_current_project)):
         "discord_webhook_escalate": webhook_1,
         "discord_webhook_dev": webhook_2,
         "created_at": project.created_at.isoformat(),
+        "is_test": project.is_test,
     }
 
 

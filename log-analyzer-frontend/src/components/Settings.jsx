@@ -8,6 +8,7 @@ function Settings() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [project, setProject] = useState(null);
+  const [isTest, setIsTest] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -32,6 +33,7 @@ function Settings() {
           discord_webhook_escalate: projectData.discord_webhook_escalate,
           discord_webhook_dev: projectData.discord_webhook_dev,
         });
+        setIsTest(projectData.is_test);
       } catch (err) {
         console.error("Failed to fetch project:", err);
       }
@@ -150,6 +152,7 @@ function Settings() {
               />
               <button
                 type="button"
+                disabled={isTest}
                 onClick={() => {
                   navigator.clipboard.writeText(project.api_key);
                   alert("API key copied to clipboard!");
@@ -176,6 +179,7 @@ function Settings() {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
               placeholder="••••••••"
               minLength={8}
+              disabled={isTest}
             />
           </div>
           {/* Log Source URL */}
@@ -190,6 +194,7 @@ function Settings() {
               onChange={handleChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
               required
+              disabled={isTest}
             />
           </div>
           {/* User Email */}
@@ -204,6 +209,7 @@ function Settings() {
               onChange={handleChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
               required
+              disabled={isTest}
             />
           </div>
           {/* Discord Webhook - ESCALATE */}
@@ -218,6 +224,7 @@ function Settings() {
               onChange={handleChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
               required
+              disabled={isTest}
             />
           </div>
           {/* Discord Webhook - DEV */}
@@ -232,11 +239,12 @@ function Settings() {
               onChange={handleChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
               required
+              disabled={isTest}
             />
           </div>
           <button
             type="submit"
-            disabled={loading}
+            disabled={isTest || loading}
             className={`w-full py-3 rounded-lg font-semibold text-white transition-colors flex items-center justify-center ${
               loading
                 ? "bg-gray-400 cursor-not-allowed"
