@@ -25,7 +25,21 @@ def list_incidents(
         query = query.filter(func.lower(Incident.status) == status)
 
     if severity or ticket_title:
-        query = query.join(Analysis, Incident.id == Analysis.incident_id)
+        latest_analysis = db.query(
+            Analysis.incident_id,
+            Analysis.id.label("analysis_id"),
+            func.row_number()
+            .over(
+                partition_by=Analysis.incident_id, order_by=Analysis.created_at.desc()
+            )
+            .label("rn"),
+        ).subquery()
+
+        query = query.join(
+            latest_analysis, Incident.id == latest_analysis.c.incident_id
+        ).filter(latest_analysis.c.rn == 1)
+
+        query = query.join(Analysis, Analysis.id == latest_analysis.c.analysis_id)
 
         if severity:
             severity = severity.strip().lower()
@@ -36,19 +50,6 @@ def list_incidents(
             query = query.filter(
                 func.lower(Analysis.ticket_title).contains(ticket_title.lower())
             )
-
-        subquery = (
-            db.query(
-                Analysis.incident_id, func.max(Analysis.created_at).label("max_created")
-            )
-            .group_by(Analysis.incident_id)
-            .subquery()
-        )
-        query = query.join(
-            subquery,
-            (Analysis.incident_id == subquery.c.incident_id)
-            & (Analysis.created_at == subquery.c.max_created),
-        )
 
     incidents = query.order_by(Incident.last_seen.desc()).limit(limit).all()
 

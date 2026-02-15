@@ -25,13 +25,84 @@ class IncidentAnalysis(BaseModel):
     ticket_body: str = Field(description="Detailed ticket description for developers")
 
 
+def validate_analysis(analysis: IncidentAnalysis, incident) -> IncidentAnalysis:
+    """Validate and correct analysis output to ensure consistency"""
+
+    critical_patterns = [
+        "outofmemoryerror",
+        "heap space",
+        "segmentation fault",
+        "segfault",
+        "core dumped",
+        "fatal error",
+        "stack overflow",
+    ]
+
+    high_patterns = [
+        "database connection",
+        "connection refused",
+        "timeout",
+        "null pointer",
+        "exception",
+        "failed to connect",
+        "connection pool",
+    ]
+
+    signature_lower = incident.signature.lower()
+    sample_text = " ".join(incident.sample_lines or []).lower()
+    full_text = f"{signature_lower} {sample_text}"
+
+    if any(pattern in full_text for pattern in critical_patterns):
+        if analysis.severity not in ["critical", "high"]:
+            analysis.severity = "critical"
+        if analysis.disposition not in ["ESCALATE", "NEEDS_ONCALL"]:
+            analysis.disposition = "ESCALATE"
+
+    elif any(pattern in full_text for pattern in high_patterns):
+        if analysis.severity == "low":
+            analysis.severity = "high"
+
+    analysis.severity = analysis.severity.lower().strip()
+
+    analysis.disposition = analysis.disposition.upper().strip()
+
+    if analysis.severity == "critical" and analysis.disposition not in [
+        "ESCALATE",
+        "NEEDS_ONCALL",
+    ]:
+        analysis.disposition = "ESCALATE"
+
+    if analysis.severity == "high" and analysis.disposition not in [
+        "ESCALATE",
+        "NEEDS_ONCALL",
+        "NEEDS_DEV",
+    ]:
+        analysis.disposition = "NEEDS_ONCALL"
+
+    if analysis.disposition == "ESCALATE" and analysis.severity not in [
+        "critical",
+        "high",
+    ]:
+        analysis.severity = "high"
+
+    analysis.confidence = max(0.0, min(1.0, analysis.confidence))
+
+    if not analysis.ticket_title or not analysis.ticket_title.strip():
+        analysis.ticket_title = f"{incident.source} - {incident.signature[:50]}"
+
+    if len(analysis.ticket_title) > 100:
+        analysis.ticket_title = analysis.ticket_title[:97] + "..."
+
+    return analysis
+
+
 class DecisionEngine:
     """LangChain-based decision engine for incident analysis"""
 
     def __init__(self):
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
-            print("⚠️  Warning: GROQ_API_KEY not found. LLM analysis disabled.")
+            print("Warning: GROQ_API_KEY not found. LLM analysis disabled.")
             self.llm = None
             return
 
@@ -56,17 +127,24 @@ Your job is to:
 4. Draft a ticket for the development team
 
 Severity guidelines:
-- CRITICAL: Service down, data loss, security breach, affects all users
-- HIGH: Major feature broken, affects many users, revenue impact
-- MEDIUM: Feature partially broken, affects some users, has workarounds
-- LOW: Minor issue, cosmetic, affects few users
+- CRITICAL: Service down, data loss, security breach, OutOfMemoryError, heap space errors, segfaults, fatal errors, affects all users
+- HIGH: Major feature broken, database connection errors, null pointer exceptions, affects many users, revenue impact
+- MEDIUM: Feature partially broken, intermittent errors, affects some users, has workarounds
+- LOW: Minor issue, cosmetic, logging errors, affects few users
 
-Disposition guidelines:
-- ESCALATE: Critical issue requiring immediate attention (page on-call)
-- NEEDS_ONCALL: High priority, notify on-call engineer
-- NEEDS_DEV: Standard development ticket needed
-- OBSERVE: Monitor for patterns, only act if it repeats
-- NO_ACTION: Known noise, safe to ignore
+Disposition guidelines (must align with severity):
+- ESCALATE: ONLY for CRITICAL/HIGH severity - requires immediate attention (page on-call)
+- NEEDS_ONCALL: For HIGH severity - notify on-call engineer during business hours
+- NEEDS_DEV: For MEDIUM/HIGH severity - standard development ticket needed
+- OBSERVE: For LOW/MEDIUM severity - monitor for patterns, only act if it repeats
+- NO_ACTION: For LOW severity - known noise, safe to ignore
+
+**CRITICAL RULES**: 
+- If severity is CRITICAL or HIGH → disposition MUST be ESCALATE or NEEDS_ONCALL
+- OutOfMemoryError, heap space errors, segfaults, fatal errors → ALWAYS CRITICAL severity with ESCALATE disposition
+- Database connection errors, null pointer exceptions → ALWAYS HIGH severity minimum
+- If disposition is ESCALATE → severity MUST be CRITICAL or HIGH
+- ALWAYS provide a ticket_title (never null or empty)
 
 Be concise, actionable, and technical.
 
@@ -85,7 +163,13 @@ Be concise, actionable, and technical.
 **Sample Error Logs:**
 {sample_logs}
 
-Provide a structured analysis with severity, disposition, summary, next steps, and ticket draft.""",
+Provide a structured analysis with severity, disposition, summary, next steps, and ticket draft.
+
+IMPORTANT REMINDERS:
+- OutOfMemoryError and heap space errors are ALWAYS CRITICAL severity with ESCALATE disposition
+- Database connection errors are ALWAYS HIGH severity minimum
+- Always provide a ticket_title (never leave it null or empty)
+- Ensure severity and disposition are aligned""",
                 ),
             ]
         )
@@ -117,6 +201,8 @@ Provide a structured analysis with severity, disposition, summary, next steps, a
             response = self.llm.invoke(formatted_prompt)
 
             analysis = self.parser.parse(response.content)
+
+            analysis = validate_analysis(analysis, incident)
 
             return analysis
 
