@@ -1,9 +1,25 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { incidentsAPI, authAPI } from "../services/api";
 import Navbar from "./Navbar";
 import IncidentCard from "./IncidentCard";
 import { RefreshCw, AlertTriangle } from "lucide-react";
 import { Play, Square, AlertCircle } from "lucide-react";
+
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 function Dashboard() {
   const [incidents, setIncidents] = useState([]);
@@ -16,15 +32,11 @@ function Dashboard() {
   const [logServerStatus, setLogServerStatus] = useState("unknown");
   const [showNotice, setShowNotice] = useState(true);
 
-  const filtersRef = useRef(filters);
+  const debouncedFilters = useDebounce(filters, 500);
 
-  useEffect(() => {
-    filtersRef.current = filters;
-  }, [filters]);
-
-  const fetchIncidents = async () => {
+  const fetchIncidents = useCallback(async (filterParams) => {
     try {
-      const response = await incidentsAPI.list(filtersRef.current);
+      const response = await incidentsAPI.list(filterParams);
       const incidentsList = response.data;
       setIncidents(incidentsList);
     } catch (err) {
@@ -32,20 +44,25 @@ function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     setLoading(true);
-    fetchIncidents();
+    fetchIncidents(debouncedFilters);
+  }, [debouncedFilters, fetchIncidents]);
 
-    const interval = setInterval(fetchIncidents, 5000);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchIncidents(debouncedFilters);
+    }, 5000);
+
     return () => clearInterval(interval);
-  }, [filters]);
+  }, [debouncedFilters, fetchIncidents]);
 
   const handleClose = async (id) => {
     try {
       await incidentsAPI.close(id);
-      fetchIncidents();
+      fetchIncidents(debouncedFilters);
     } catch (err) {
       console.error("Failed to close incident:", err);
     }
@@ -54,7 +71,7 @@ function Dashboard() {
   const handleIgnore = async (id) => {
     try {
       await incidentsAPI.ignore(id);
-      fetchIncidents();
+      fetchIncidents(debouncedFilters);
     } catch (err) {
       console.error("Failed to ignore incident:", err);
     }
