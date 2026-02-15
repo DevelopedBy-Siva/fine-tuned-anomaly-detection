@@ -1,4 +1,3 @@
-/* Reset and base styles */
 * {
   margin: 0;
   padding: 0;
@@ -46,7 +45,6 @@ code {
   background: #555;
 }
 
-/* Animation */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -62,7 +60,6 @@ code {
   animation: fadeIn 0.3s ease-out;
 }
 
-/* Loading states */
 .skeleton {
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
   background-size: 200% 100%;
@@ -78,7 +75,6 @@ code {
   }
 }
 
-/* Custom focus styles */
 input:focus,
 select:focus,
 textarea:focus,
@@ -86,7 +82,6 @@ button:focus {
   outline: none;
 }
 
-/* Transitions */
 * {
   transition:
     background-color 0.2s ease,

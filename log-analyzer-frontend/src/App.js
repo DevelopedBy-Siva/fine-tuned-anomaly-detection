@@ -17,12 +17,10 @@ import Settings from "./components/Settings";
 import axios from "axios";
 import { MdError } from "react-icons/md";
 
-// Protected Route wrapper
 function ProtectedRoute({ children }) {
   return isAuthenticated() ? children : <Navigate to="/login" />;
 }
 
-// Public Route wrapper (redirect to dashboard if already logged in)
 function PublicRoute({ children }) {
   return !isAuthenticated() ? children : <Navigate to="/dashboard" />;
 }
@@ -78,7 +76,6 @@ function App() {
   ) : (
     <Router>
       <Routes>
-        {/* Public Routes */}
         <Route
           path="/login"
           element={
@@ -96,7 +93,6 @@ function App() {
           }
         />
 
-        {/* Protected Routes */}
         <Route
           path="/dashboard"
           element={
@@ -114,10 +110,8 @@ function App() {
           }
         />
 
-        {/* Default Route */}
         <Route path="/" element={<Navigate to="/dashboard" />} />
 
-        {/* 404 */}
         <Route
           path="*"
           element={
@@ -131,7 +125,7 @@ function App() {
                   href="/dashboard"
                   className="text-sm px-8 py-3 bg-sky-500 text-white font-normal rounded-lg hover:bg-sky-600"
                 >
-                  Go to Dashboard
+                  Return to Home
                 </a>
               </div>
             </div>

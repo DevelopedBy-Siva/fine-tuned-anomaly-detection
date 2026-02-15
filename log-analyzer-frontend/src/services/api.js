@@ -5,7 +5,6 @@ export const API_BASE_URL =
 export const TEST_LOG_SERVER_URL =
   process.env.REACT_APP_TEST_LOG_SERVER_URL || "http://localhost:5001";
 
-// Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -13,7 +12,6 @@ const api = axios.create({
   },
 });
 
-// Add token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
@@ -22,7 +20,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Auth API
 export const authAPI = {
   register: (data) => api.post("/api/auth/register", data),
   login: (data) => api.post("/api/auth/login", data),
@@ -32,7 +29,6 @@ export const authAPI = {
   stopLogServer: () => api.post("/api/auth/log-server/stop"),
   statusLogServer: () => api.get("/api/auth/log-server/status"),
 
-  // Validation endpoints
   validateUrl: (url) => api.post("/api/auth/validate/url", { url }),
   validateDiscordEscalate: (webhook_url) =>
     api.post("/api/auth/validate/discord-escalate", { webhook_url }),
@@ -41,7 +37,6 @@ export const authAPI = {
   validateEmail: (email) => api.post("/api/auth/validate/email", { email }),
 };
 
-// Incidents API
 export const incidentsAPI = {
   list: (params) => api.get("/api/incidents", { params }),
   get: (id) => api.get(`/api/incidents/${id}`),
@@ -49,12 +44,10 @@ export const incidentsAPI = {
   ignore: (id) => api.post(`/api/incidents/${id}/ignore`),
 };
 
-// Helper to check if user is authenticated
 export const isAuthenticated = () => {
   return !!localStorage.getItem("token");
 };
 
-// Helper to logout
 export const logout = () => {
   localStorage.removeItem("token");
   localStorage.removeItem("project");

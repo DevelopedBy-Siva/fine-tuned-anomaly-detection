@@ -56,7 +56,6 @@ function Settings() {
       await authAPI.updateSettings(formData);
       setSuccess(true);
 
-      // Update local storage
       const updatedProject = { ...project, ...formData };
       localStorage.setItem("project", JSON.stringify(updatedProject));
 
@@ -165,7 +164,7 @@ function Settings() {
               Use this in your log shipper's X-API-Key header
             </p>
           </div>
-          {/* Password */}
+
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-2">
               New Password (leave blank to keep current)
@@ -182,7 +181,7 @@ function Settings() {
               autoComplete="new-password"
             />
           </div>
-          {/* Log Source URL */}
+
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-2">
               Log Source URL
@@ -197,7 +196,7 @@ function Settings() {
               disabled={isTest}
             />
           </div>
-          {/* User Email */}
+
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-2">
               Your Email
@@ -212,7 +211,7 @@ function Settings() {
               disabled={isTest}
             />
           </div>
-          {/* Discord Webhook - ESCALATE */}
+
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-2">
               Discord Webhook - Critical Incidents
@@ -227,7 +226,7 @@ function Settings() {
               disabled={isTest}
             />
           </div>
-          {/* Discord Webhook - DEV */}
+
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-2">
               Discord Webhook - Dev Team

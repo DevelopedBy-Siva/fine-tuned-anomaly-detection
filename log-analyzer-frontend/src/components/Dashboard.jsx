@@ -3,17 +3,17 @@ import { incidentsAPI, authAPI } from "../services/api";
 import Navbar from "./Navbar";
 import IncidentCard from "./IncidentCard";
 import { RefreshCw, AlertTriangle } from "lucide-react";
-import { Play, Square } from "lucide-react";
+import { Play, Square, AlertCircle } from "lucide-react";
 
 function Dashboard() {
   const [incidents, setIncidents] = useState([]);
-  //   const [analyses, setAnalyses] = useState({});
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     status: "open",
     source: "",
   });
   const [logServerStatus, setLogServerStatus] = useState("unknown");
+  const [showNotice, setShowNotice] = useState(true);
 
   const fetchIncidents = async () => {
     try {
@@ -106,6 +106,36 @@ function Dashboard() {
       <Navbar />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-16">
+        {showNotice && (
+          <div className="relative mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-5">
+            <div className="flex items-start">
+              <AlertCircle
+                className="text-amber-400 mr-3 mt-0.5 shrink-0"
+                size={18}
+              />
+
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-amber-300 mb-1">
+                  Free Instance Notice
+                </p>
+
+                <p className="text-sm text-amber-200 leading-relaxed">
+                  The server runs on a free-tier instance and may shut down
+                  after periods of inactivity. Due to limited database storage,
+                  all incident records are cleared on each server startup to
+                  maintain system functionality.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowNotice(false)}
+                className="ml-4 text-amber-300 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
         <div className="mb-8">
           <h1 className="text-3xl font-medium text-white mb-2">
             Incident Dashboard
@@ -224,7 +254,7 @@ function Dashboard() {
             </div>
           </div>
         </div>
-        {/* Incidents List */}
+
         {loading ? (
           <div className="text-center py-12">
             <span className="loader"></span>
@@ -257,7 +287,7 @@ function Dashboard() {
         )}
         <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-black/70 backdrop-blur px-4 py-4 text-center text-xs text-gray-400">
           <RefreshCw size={14} className="inline mr-2" />
-          Auto-refreshing every 5 seconds
+          Auto-refreshing every 5 seconds.
         </div>
       </div>
     </div>

@@ -33,7 +33,6 @@ function IncidentCard({ incident, analysis, onClose, onIgnore }) {
 
   return (
     <div className="rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-800">
-      {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center space-x-3">
           <span
@@ -105,7 +104,6 @@ function IncidentCard({ incident, analysis, onClose, onIgnore }) {
             </div>
           )}
 
-          {/* Ticket Draft */}
           {analysis.analysis_source === "llm" && analysis.ticket_title && (
             <div className="mt-4 p-3 bg-pink-50 rounded border border-pink-200">
               <p className="text-xs font-semibold text-pink-800 mb-1">
@@ -122,13 +120,11 @@ function IncidentCard({ incident, analysis, onClose, onIgnore }) {
         </div>
       )}
 
-      {/* Signature */}
       {/* <div className="flex items-center text-xs text-gray-400 mb-4">
         <Hash size={12} className="mr-1" />
         {incident.signature.substring(0, 16)}...
       </div> */}
 
-      {/* Actions */}
       {incident.status === "open" && (
         <div className="flex space-x-2">
           <button

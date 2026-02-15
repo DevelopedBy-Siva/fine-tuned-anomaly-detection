@@ -121,8 +121,8 @@ function Register() {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 pt-20 relative">
-      <div className="absolute top-6 left-6 flex items-center">
+    <div className="max-w-7xl mx-auto min-h-screen flex flex-col items-center justify-center p-4 pt-20 relative">
+      <div className="flex items-center">
         <Activity className="text-sky-500 mr-2" size={28} />
       </div>
       <div className="rounded-2xl shadow-2xl w-full max-w-2xl p-8">
@@ -143,7 +143,6 @@ function Register() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Project Name */}
           <div>
             <label className="block text-sm font-normal text-gray-400 mb-2">
               Project Name
@@ -165,7 +164,6 @@ function Register() {
             </p>
           </div>
 
-          {/* Password */}
           <div>
             <label className="block text-sm font-normal text-gray-400 mb-2">
               Password
@@ -185,7 +183,6 @@ function Register() {
             <p className="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
           </div>
 
-          {/* Log Source URL */}
           <div>
             <label className="block text-sm font-normal text-gray-400 mb-2">
               Log Source URL
@@ -220,7 +217,6 @@ function Register() {
             )}
           </div>
 
-          {/* User Email */}
           <div>
             <label className="block text-sm font-normal text-gray-400 mb-2">
               Your Email
@@ -258,7 +254,6 @@ function Register() {
             </p>
           </div>
 
-          {/* Discord Webhook - ESCALATE */}
           <div>
             <label className="block text-sm font-normal text-gray-400 mb-2">
               Discord Webhook - Critical Incidents
@@ -293,7 +288,6 @@ function Register() {
             )}
           </div>
 
-          {/* Discord Webhook - DEV */}
           <div>
             <label className="block text-sm font-normal text-gray-400 mb-2">
               Discord Webhook - Dev Team

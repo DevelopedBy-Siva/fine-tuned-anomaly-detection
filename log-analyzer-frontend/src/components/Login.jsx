@@ -43,8 +43,8 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 pt-20 relative">
-      <div className="absolute top-6 left-6 flex items-center">
+    <div className="max-w-7xl mx-auto min-h-screen flex flex-col items-center justify-center p-4 pt-20 relative">
+      <div className="flex items-center">
         <Activity className="text-sky-500 mr-2" size={28} />
       </div>
       <div className="rounded-2xl shadow-2xl w-full max-w-md p-8">
@@ -62,6 +62,40 @@ function Login() {
           </div>
         )}
 
+        <div className="mb-6 p-5 rounded-xl border border-sky-500/30 bg-sky-500/10">
+          <p className="text-xs font-medium text-sky-500 mb-3">
+            Demo Credentials
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-sky-200">
+            <div className="flex flex-col">
+              <span className="text-xs text-sky-600 mb-1">Project Name</span>
+              <span className="font-normal text-xs text-gray-300">
+                test-server
+              </span>
+            </div>
+
+            <div className="flex flex-col">
+              <span className="text-xs text-sky-600 mb-1">Password</span>
+              <span className="font-normal text-xs text-gray-300">
+                testserver
+              </span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              setFormData({
+                name: "test-server",
+                password: "testserver",
+              })
+            }
+            className="mt-4 text-xs bg-sky-500 hover:bg-sky-600 text-white px-4 py-1 rounded-lg transition-colors"
+          >
+            Autofill Credentials
+          </button>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-normal text-gray-400 mb-2">
