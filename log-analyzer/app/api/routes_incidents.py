@@ -21,16 +21,21 @@ def list_incidents(
     query = db.query(Incident).filter(Incident.project_id == project.id)
 
     if status:
-        query = query.filter(Incident.status == status)
+        status = status.strip().lower()
+        query = query.filter(func.lower(Incident.status) == status)
 
     if severity or ticket_title:
         query = query.join(Analysis, Incident.id == Analysis.incident_id)
 
         if severity:
-            query = query.filter(Analysis.severity == severity)
+            severity = severity.strip().lower()
+            query = query.filter(func.lower(Analysis.severity) == severity)
 
         if ticket_title:
-            query = query.filter(Analysis.ticket_title.contains(ticket_title))
+            ticket_title = ticket_title.strip()
+            query = query.filter(
+                func.lower(Analysis.ticket_title).contains(ticket_title.lower())
+            )
 
         subquery = (
             db.query(
