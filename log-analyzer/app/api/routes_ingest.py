@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from typing import Optional
+import requests
 from app.models.schemas import IngestRequest, IngestResponse
 from app.core.parser import ParsedLog
 from app.core.signatures import generate_signature
@@ -145,3 +146,56 @@ def ingest_logs(
         incidents_updated=len(updated),
         total_logs_processed=processed,
     )
+
+
+@router.post("/log-server/start")
+def start_log_server(
+    project: Project = Depends(get_project_by_api_key),
+):
+
+    try:
+        resp = requests.post(
+            f"{project.log_source_url}/api/start",
+            headers={"X-API-Key": project.api_key},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        return resp.json()
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Log server unreachable: {e}")
+
+
+@router.post("/log-server/stop")
+def stop_log_server(
+    project: Project = Depends(get_project_by_api_key),
+):
+
+    try:
+        resp = requests.post(
+            f"{project.log_source_url}/api/stop",
+            headers={"X-API-Key": project.api_key},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        return resp.json()
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Log server unreachable: {e}")
+
+
+@router.get("/log-server/status")
+def log_server_status(
+    project: Project = Depends(get_project_by_api_key),
+):
+    try:
+        resp = requests.get(
+            f"{project.log_source_url}/api/status",
+            headers={"X-API-Key": project.api_key},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        return resp.json()
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Log server unreachable: {e}")

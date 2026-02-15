@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 import random
@@ -12,6 +12,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = FastAPI(title="Log Server")
+
+
+def verify_api_key(x_api_key: str = Header(None)):
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
 
 ANALYZER_URL = os.getenv("ANALYZER_URL")
 API_KEY = os.getenv("LOGSHIPPER_API_KEY")
@@ -285,26 +291,26 @@ async def startup_event():
     print("[LOG-SERVER] Initialized")
 
 
-@app.post("/api/start")
+@app.post("/api/start", dependencies=[Depends(verify_api_key)])
 async def start_generation():
     if log_generator.running:
         return {"error": "Already running", "status": "running"}
 
     asyncio.create_task(log_generator.run(duration=300))
 
-    return {"message": "Log generation started"}
+    return {"message": "Log generation started", "status": "running"}
 
 
-@app.post("/api/stop")
+@app.post("/api/stop", dependencies=[Depends(verify_api_key)])
 async def stop_generation():
     if not log_generator.running:
         return {"error": "Not running", "status": "idle"}
 
     log_generator.stop()
-    return {"message": "Stopped", "stats": log_generator.stats}
+    return {"message": "Stopped", "stats": log_generator.stats, "status": "idle"}
 
 
-@app.get("/api/status")
+@app.get("/api/status", dependencies=[Depends(verify_api_key)])
 async def get_status():
     return {
         "status": "running" if log_generator.running else "idle",

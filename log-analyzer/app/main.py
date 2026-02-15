@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.services.storage import init_db
+from app.services.cleanup import cleanup_all_data
 from app.api import routes_ingest, routes_incidents, routes_auth
 
 from dotenv import load_dotenv
@@ -15,6 +16,7 @@ load_dotenv()
 async def lifespan(app: FastAPI):
     print("Starting Log Analyzer...")
     init_db()
+    cleanup_all_data()
     yield
     print("Shutting down...")
 

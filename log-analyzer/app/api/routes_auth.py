@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+import requests
 from pydantic import BaseModel, validator
 from app.services.storage import get_db, Project
 from app.services.auth import (
@@ -338,3 +339,56 @@ def update_project_settings(
     db.commit()
 
     return {"message": "Settings updated successfully"}
+
+
+@router.post("/log-server/start")
+def start_log_server(
+    project: Project = Depends(get_current_project),
+):
+
+    try:
+        resp = requests.post(
+            f"{project.log_source_url}/api/start",
+            headers={"X-API-Key": project.api_key},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        return resp.json()
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Log server unreachable: {e}")
+
+
+@router.post("/log-server/stop")
+def stop_log_server(
+    project: Project = Depends(get_current_project),
+):
+
+    try:
+        resp = requests.post(
+            f"{project.log_source_url}/api/stop",
+            headers={"X-API-Key": project.api_key},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        return resp.json()
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Log server unreachable: {e}")
+
+
+@router.get("/log-server/status")
+def log_server_status(
+    project: Project = Depends(get_current_project),
+):
+    try:
+        resp = requests.get(
+            f"{project.log_source_url}/api/status",
+            headers={"X-API-Key": project.api_key},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        return resp.json()
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Log server unreachable: {e}")
