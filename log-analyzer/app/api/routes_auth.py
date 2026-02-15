@@ -126,46 +126,43 @@ def validate_user_email(data: dict):
 def register_project(project: ProjectCreate, db: Session = Depends(get_db)):
     """Create a new project with full validation"""
 
+    existing = db.query(Project).filter(Project.name == project.name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Project name already exists")
+
+    errors = []
+
+    url_valid, url_msg = validate_log_source_url(project.log_source_url)
+    if not url_valid:
+        errors.append({"field": "log_source_url", "message": url_msg})
+
+    email_valid, email_msg = validate_email(project.user_email)
+    if not email_valid:
+        errors.append({"field": "user_email", "message": email_msg})
+
+    escalate_valid, escalate_msg = validate_discord_webhook(
+        project.discord_webhook_escalate
+    )
+    if not escalate_valid:
+        errors.append({"field": "discord_webhook_escalate", "message": escalate_msg})
+
+    dev_valid, dev_msg = validate_discord_webhook(project.discord_webhook_dev)
+    if not dev_valid:
+        errors.append({"field": "discord_webhook_dev", "message": dev_msg})
+
+    if errors:
+        raise HTTPException(status_code=400, detail={"errors": errors})
+
+    new_project = Project(
+        name=project.name,
+        password_hash=hash_password(project.password),
+        log_source_url=project.log_source_url,
+        user_email=project.user_email,
+        discord_webhook_escalate=project.discord_webhook_escalate,
+        discord_webhook_dev=project.discord_webhook_dev,
+    )
+
     try:
-
-        existing = db.query(Project).filter(Project.name == project.name).first()
-        if existing:
-            raise HTTPException(status_code=400, detail="Project name already exists")
-
-        errors = []
-
-        url_valid, url_msg = validate_log_source_url(project.log_source_url)
-        if not url_valid:
-            errors.append({"field": "log_source_url", "message": url_msg})
-
-        email_valid, email_msg = validate_email(project.user_email)
-        if not email_valid:
-            errors.append({"field": "user_email", "message": email_msg})
-
-        escalate_valid, escalate_msg = validate_discord_webhook(
-            project.discord_webhook_escalate
-        )
-        if not escalate_valid:
-            errors.append(
-                {"field": "discord_webhook_escalate", "message": escalate_msg}
-            )
-
-        dev_valid, dev_msg = validate_discord_webhook(project.discord_webhook_dev)
-        if not dev_valid:
-            errors.append({"field": "discord_webhook_dev", "message": dev_msg})
-
-        if errors:
-            raise HTTPException(status_code=400, detail={"errors": errors})
-
-        new_project = Project(
-            name=project.name,
-            password_hash=hash_password(project.password),
-            log_source_url=project.log_source_url,
-            user_email=project.user_email,
-            discord_webhook_escalate=project.discord_webhook_escalate,
-            discord_webhook_dev=project.discord_webhook_dev,
-        )
-
         db.add(new_project)
         db.commit()
         db.refresh(new_project)
@@ -189,7 +186,8 @@ def register_project(project: ProjectCreate, db: Session = Depends(get_db)):
             },
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to create project")
 
 
 @router.post("/login")
