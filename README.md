@@ -1,616 +1,602 @@
-# 🔍 AI-Powered Log Analyzer
+# Log Anomaly
 
-An intelligent log analysis system that automatically detects, clusters, and analyzes production incidents using rule-based runbooks and LLM-powered insights with multi-project support and real-time notifications.
+A full-stack log monitoring and incident management system that automatically detects, clusters, analyzes, and routes production errors using pattern matching and LLM-based analysis.
 
-![Dashboard Preview](docs/dashboard-preview.png)
+**Live Demo:** https://log-anomaly.vercel.app
 
----
+## Overview
 
-## 🌟 Features
+Log Anomaly helps you make sense of application logs by automatically grouping similar errors, analyzing their severity, and routing notifications to the right people through Discord or email. It uses a combination of runbook-based pattern matching and AI-powered analysis to provide actionable insights.
 
-### Core Capabilities
+The system consists of three main components:
 
-- **Multi-Project Support** - Isolated projects with individual authentication
-- **Intelligent Log Parsing** - Extracts structured data from unstructured logs
-- **Smart Clustering** - Groups similar errors using signature-based deduplication
-- **Runbook Matching** - Applies predefined YAML rules for known issues
-- **AI Analysis** - Uses LLMs (Groq/Llama) to analyze unknown incidents
-- **Real-time Dashboard** - Live monitoring with auto-refresh
-- **Action Recommendations** - Generates next steps and ticket drafts
-- **Multi-Channel Alerts** - Discord webhooks and email notifications
+- **Log Server** - Simulates production logs with realistic errors
+- **Log Analyzer** - Processes logs, detects patterns, and manages incidents
+- **Frontend Dashboard** - View and manage incidents through a web interface
 
-### What Makes It Smart
+## Screenshots
 
-- **Signature Generation** - Normalizes variable data (IDs, timestamps) to create stable patterns
-- **Time-based Clustering** - Groups related errors within configurable time windows
-- **Hybrid Approach** - Fast rule-based matching + intelligent LLM fallback
-- **Structured Outputs** - LLM returns JSON with severity, disposition, and action items
-- **Validated Integrations** - Live verification of Discord webhooks and log sources
+**Dashboard View**
+![Dashboard](imgs/dashboard.jpeg)
 
----
+**Incident Details**
+![Incident Details](imgs/incidents.jpeg)
 
-## 🏗️ Architecture
+**Registration Page**
+![Registration](imgs/register.jpeg)
+
+**Login Page**
+![Login](imgs/login.jpeg)
+
+**Settings Page**
+![Settings](imgs/settings.jpeg)
+
+## Architecture
 
 ```
-┌─────────────────────────────────────────┐
-│     React Frontend (Port 3000)          │
-│  - Project registration & login         │
-│  - Real-time incident dashboard         │
-│  - Settings & configuration             │
-└──────────────┬──────────────────────────┘
-               │ JWT Auth
-               ▼
-┌─────────────────────────────────────────┐
-│      FastAPI Backend (Port 8000)         │
-│  - Multi-project authentication         │
-│  - Log ingestion & parsing              │
-│  - Runbook & LLM analysis               │
-│  - Discord/Email notifications          │
-└──────────────┬──────────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────────┐
-│       PostgreSQL (Port 5432)            │
-│  - Projects (auth, webhooks, settings)  │
-│  - Incidents (clustered logs)           │
-│  - Analyses (runbook/AI decisions)      │
-└─────────────────────────────────────────┘
-               ▲
-               │
-┌──────────────┴──────────────────────────┐
-│        Log Sources                       │
-│  - Log Server (FastAPI - Port 5001)     │
-│  - Log Shipper (File tailer)            │
-│  - Direct HTTP ingestion                │
-└─────────────────────────────────────────┘
+┌─────────────┐
+│ Log Server  │ Generates realistic production logs
+│  (Render)   │ with errors, warnings, and info messages
+└──────┬──────┘
+       │ HTTP POST
+       │ /api/ingest
+       ▼
+┌─────────────┐
+│    Log      │ Parses logs → Generates signatures
+│  Analyzer   │ → Clusters into incidents → Analyzes
+│  (Render)   │ → Routes notifications (Discord/Email)
+└──────┬──────┘
+       │
+       │ PostgreSQL (NeonDB)
+       │
+       ▼
+┌─────────────┐
+│  Frontend   │ View incidents, manage settings,
+│  (Vercel)   │ control log generation
+└─────────────┘
 ```
 
----
+## Features
 
-## 🚀 Quick Start
+**Intelligent Log Processing**
+
+- Automatic log parsing and signature generation
+- Time-based clustering (groups similar errors within 5-minute windows)
+- Deduplication with occurrence counting
+
+**Dual Analysis Engine**
+
+- Pattern-based runbook matching for known errors
+- LLM-powered analysis (Groq/Llama) for unknown patterns
+- Automatic severity and disposition assignment
+
+**Smart Notification Routing**
+
+- Critical/High severity → Discord (escalate channel) or Email (on-call)
+- Medium severity → Discord (dev channel)
+- Low severity → Monitor and observe
+- Configurable escalation thresholds
+
+**Multi-Project Support**
+
+- Project-based isolation with API keys
+- JWT authentication for web interface
+- Per-project notification configuration
+
+**Web Dashboard**
+
+- Real-time incident tracking
+- Filter by status, severity, or keywords
+- Close or ignore incidents
+- Start/stop log generation
+- Project settings management
+
+## Tech Stack
+
+**Backend**
+
+- FastAPI (Python) - REST API framework
+- PostgreSQL (NeonDB) - Database
+- SQLAlchemy - ORM
+- LangChain + Groq - LLM analysis
+- YAML - Runbook definitions
+
+**Frontend**
+
+- React - UI framework
+- Tailwind CSS - Styling
+- Axios - HTTP client
+
+**Deployment**
+
+- Frontend: Vercel
+- Servers: Render
+- Database: NeonDB (PostgreSQL)
+
+## Project Structure
+
+```
+log-anomaly/
+├── log-server/              # Log generation service
+│   ├── server.py           # FastAPI server with error patterns
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── README.md
+│
+├── log-analyzer/           # Core analysis engine
+│   ├── app/
+│   │   ├── main.py        # FastAPI application
+│   │   ├── api/           # REST endpoints
+│   │   │   ├── routes_auth.py      # Authentication & projects
+│   │   │   ├── routes_ingest.py    # Log ingestion
+│   │   │   └── routes_incidents.py # Incident management
+│   │   ├── core/          # Business logic
+│   │   │   ├── parser.py          # Log parsing
+│   │   │   ├── signatures.py      # Signature generation
+│   │   │   ├── clustering.py      # Incident clustering
+│   │   │   ├── runbook_loader.py  # YAML runbook loading
+│   │   │   ├── runbook_matcher.py # Pattern matching
+│   │   │   └── decision_engine.py # LLM analysis
+│   │   ├── models/        # Pydantic schemas
+│   │   └── services/      # Supporting services
+│   │       ├── storage.py        # Database models
+│   │       ├── auth.py           # JWT & password hashing
+│   │       ├── validators.py     # Input validation
+│   │       ├── notifications.py  # Discord & email
+│   │       └── cleanup.py        # Database cleanup
+│   ├── runbooks/          # YAML runbook definitions
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── README.md
+│
+├── log-analyzer-frontend/  # React web dashboard
+│   ├── src/
+│   │   ├── App.js
+│   │   ├── components/
+│   │   │   ├── Dashboard.jsx    # Main incident view
+│   │   │   ├── IncidentCard.jsx # Individual incident display
+│   │   │   ├── Login.jsx        # Login form
+│   │   │   ├── Register.jsx     # Registration form
+│   │   │   ├── Settings.jsx     # Project settings
+│   │   │   └── Navbar.jsx       # Navigation bar
+│   │   └── services/
+│   │       └── api.js           # API client
+│   ├── public/
+│   ├── package.json
+│   └── README.md
+│
+└── README.md              # This file
+```
+
+## How It Works
+
+### 1. Log Generation
+
+The log server generates realistic production-style logs:
+
+- 80% info messages (normal operations)
+- 15% error messages (database timeouts, NPEs, Redis failures, etc.)
+- 5% warning messages (slow requests)
+
+Logs are buffered in-memory and shipped to the analyzer in batches every second.
+
+### 2. Log Processing Pipeline
+
+**Parse → Sign → Cluster → Analyze → Notify**
+
+**Parsing:** Extract timestamp, log level, and message from each log line
+
+**Signature Generation:** Create a unique hash by normalizing the error message:
+
+- Remove dynamic values (IDs, timestamps, numbers)
+- Keep error type and core message
+- Example: `log-server:ERROR:Database_connection_timeout_after`
+
+**Clustering:** Group logs with the same signature within a 5-minute window:
+
+- First occurrence → Create new incident
+- Subsequent occurrences → Update count and last_seen
+- Store up to 10 sample log lines per incident
+
+**Analysis:** Two-path approach:
+
+1. **Runbook Matching** - Check YAML runbooks for pattern matches
+   - If match score ≥ 50% → Use runbook analysis
+   - Apply escalation rules (e.g., escalate after 20 occurrences)
+2. **LLM Analysis** - Fallback for unknown patterns
+   - Uses Groq (Llama 3.3 70B) via LangChain
+   - Generates severity, disposition, summary, next steps, and ticket draft
+   - Validates output for consistency
+
+**Notification Routing:** Based on disposition from analysis:
+
+- `ESCALATE` → Discord (escalate webhook)
+- `NEEDS_ONCALL` → Email (SMTP)
+- `NEEDS_DEV` → Discord (dev webhook)
+- `OBSERVE` or `NO_ACTION` → No notification
+
+### 3. Incident Management
+
+Through the web dashboard, you can:
+
+- View all incidents with real-time updates
+- Filter by status, severity, or search terms
+- See full analysis including severity, summary, and next steps
+- Close resolved incidents
+- Ignore known noise
+- Control log generation (start/stop)
+
+## Setup
 
 ### Prerequisites
 
-- Python 3.10+
-- Node.js 16+ (for React frontend)
-- PostgreSQL 12+
-- Groq API key (free tier: https://console.groq.com/keys)
-- Discord webhooks (for alerts)
+- Node.js 16+ (for frontend)
+- Python 3.10+ (for backend services)
+- PostgreSQL (NeonDB or local)
+- Groq API key (optional, for LLM analysis)
+- Discord webhooks (optional, for notifications)
+- SMTP credentials (optional, for email notifications)
 
----
+### Local Development
 
-### 1. Database Setup
+**1. Clone the repository:**
 
 ```bash
-# Install PostgreSQL
-sudo apt update
-sudo apt install postgresql postgresql-contrib
-
-# Start PostgreSQL
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-
-# Create database and user
-sudo -u postgres psql
+git clone <your-repo-url>
+cd log-anomaly
 ```
 
-In PostgreSQL shell:
-
-```sql
-CREATE DATABASE log_analyzer;
-CREATE USER log_user WITH PASSWORD 'secure_password_here';
-GRANT ALL PRIVILEGES ON DATABASE log_analyzer TO log_user;
-\q
-```
-
----
-
-### 2. Backend Setup (Log Analyzer)
+**2. Set up Log Analyzer:**
 
 ```bash
 cd log-analyzer
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 
-# Configure environment
+# Create .env file
 cat > .env << EOF
-DATABASE_URL=postgresql://log_user:secure_password_here@localhost:5432/log_analyzer
-GROQ_API_KEY=your-groq-api-key-here
-SECRET_KEY=your-jwt-secret-key-change-in-production
+DATABASE_URL=postgresql://user:password@localhost:5432/log_analyzer
+SECRET_KEY=your-secret-key-here
+GROQ_API_KEY=your-groq-api-key
+CORS_ORIGINS=http://localhost:3000
+# Optional SMTP settings
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
 EOF
 
-# Start the analyzer
+# Run the server
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
----
+**3. Set up Log Server:**
 
-### 3. Frontend Setup (React)
+```bash
+cd log-server
+
+# Use same virtual environment or create new one
+source ../.venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create .env file
+cat > .env << EOF
+ANALYZER_URL=http://localhost:8000/api/ingest
+LOGSHIPPER_API_KEY=your-api-key
+CORS_ORIGINS=http://localhost:3000
+EOF
+
+# Run the server
+uvicorn server:app --host 0.0.0.0 --port 5001 --reload
+```
+
+**4. Set up Frontend:**
 
 ```bash
 cd log-analyzer-frontend
+
+# Install dependencies
 npm install
+
+# Create .env file
+cat > .env << EOF
+REACT_APP_API_URL=http://localhost:8000
+EOF
+
+# Run development server
 npm start
 ```
 
-Frontend will be available at: **http://localhost:3000**
+**5. Access the application:**
 
----
+- Frontend: http://localhost:3000
+- Log Analyzer: http://localhost:8000
+- Log Server: http://localhost:5001
 
-### 4. Log Server Setup (Optional - for testing)
+### Deployment
 
-```bash
-cd log-server
-python -m venv .venv
-source .venv/bin/activate
+The application is deployed across three platforms:
 
-pip install -r requirements.txt
+**Frontend (Vercel):**
 
-# Start the log server
-uvicorn main:app --host 0.0.0.0 --port 5001 --reload
+- Automatic deployments from main branch
+- Environment variable: `REACT_APP_API_URL` (points to Render backend)
+
+**Log Analyzer (Render):**
+
+- Build command: `pip install -r requirements.txt`
+- Start command: `uvicorn app.main:app --host 0.0.0.0 --port 8000`
+- Environment variables: `DATABASE_URL`, `SECRET_KEY`, `GROQ_API_KEY`, `CORS_ORIGINS`, SMTP settings
+
+**Log Server (Render):**
+
+- Build command: `pip install -r requirements.txt`
+- Start command: `uvicorn server:app --host 0.0.0.0 --port 5001`
+- Environment variables: `ANALYZER_URL`, `LOGSHIPPER_API_KEY`, `CORS_ORIGINS`
+
+**Database (NeonDB):**
+
+- Serverless PostgreSQL
+- Connection string format: `postgresql://user:password@host/database?sslmode=require`
+
+## Configuration
+
+### Runbooks
+
+Runbooks are YAML files that define pattern-based responses to known errors. They live in `log-analyzer/runbooks/`.
+
+Example runbook structure:
+
+```yaml
+id: db_connection_timeout
+name: Database Connection Timeout
+description: Database connection pool exhaustion or network issues
+default_severity: high
+disposition: NEEDS_ONCALL
+
+patterns:
+  - "database connection timeout"
+  - "connection pool"
+  - "regex:timeout.*db-.*\\d+s"
+
+steps:
+  - Check database server health and CPU/memory
+  - Review connection pool settings
+  - Check for long-running queries
+  - Verify network connectivity
+
+observe_threshold:
+  count: 15 # Escalate after 15 occurrences
+  window_minutes: 5 # Within 5 minutes
+  escalate_to: ESCALATE # New disposition
+
+cooldown_minutes: 15 # Prevent notification spam
 ```
 
----
+To add a new runbook, create a YAML file in the `runbooks/` directory and restart the log analyzer.
 
-### 5. Generate Test Traffic (Optional)
+### Environment Variables
 
-**Terminal 1:** Traffic Generator
+**Log Analyzer:**
 
-```bash
-cd log-server
-source .venv/bin/activate
-python traffic_generator.py
-```
+- `DATABASE_URL` - PostgreSQL connection string (required)
+- `SECRET_KEY` - JWT signing key (required)
+- `GROQ_API_KEY` - Groq API key for LLM analysis (optional)
+- `CORS_ORIGINS` - Comma-separated allowed origins (required)
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` - Email config (optional)
 
-**Terminal 2:** Log Shipper
+**Log Server:**
 
-```bash
-cd log-server
-source .venv/bin/activate
-python log_shipper.py
-```
+- `ANALYZER_URL` - Log analyzer ingest endpoint (required)
+- `LOGSHIPPER_API_KEY` - API key for authentication (required)
+- `CORS_ORIGINS` - Comma-separated allowed origins (required)
 
----
+**Frontend:**
 
-## 📋 Project Registration Flow
+- `REACT_APP_API_URL` - Log analyzer base URL (required)
 
-### What You Need
-
-1. **Project Name** - Unique identifier (3-50 chars, alphanumeric + `-_`)
-2. **Password** - Secure password (min 8 chars)
-3. **Log Source URL** - URL of your log server (e.g., `http://localhost:5001`)
-4. **User Email** - Your email for incident notifications
-5. **Discord Webhook (ESCALATE)** - For critical incidents
-6. **Discord Webhook (DEV)** - For development team alerts
-
-### Validation Process
-
-The system validates all inputs during registration:
-
-✅ **Log Source URL**
-
-- Validates URL format
-- Connects to the server
-- Verifies it's a valid log server
-- Checks for proper JSON response
-
-✅ **Discord Webhooks**
-
-- Validates Discord webhook URL format
-- Sends test message to verify connectivity
-- Confirms webhook is active
-
-✅ **Email**
-
-- Validates email format
-- Ensures proper domain structure
-
-### Getting Discord Webhooks
-
-1. Go to your Discord server
-2. Right-click the channel (e.g., `#incidents-critical`)
-3. Edit Channel → Integrations → Webhooks
-4. Click "New Webhook"
-5. Copy the webhook URL
-6. Paste during registration
-
----
-
-## 🎯 How It Works
-
-### 1. Log Parsing
-
-Extracts structured data from raw logs:
-
-```python
-Input:  "[2024-02-13T10:30:45] ERROR: Database connection timeout after 30s"
-Output: {
-  "timestamp": "2024-02-13T10:30:45",
-  "level": "ERROR",
-  "message": "Database connection timeout after 30s",
-  "exception_type": None
-}
-```
-
-### 2. Signature Generation
-
-Creates stable fingerprints by normalizing variable data:
-
-```python
-Original: "Database connection timeout after 30s connecting to db-primary-1"
-Original: "Database connection timeout after 45s connecting to db-replica-2"
-         ↓ (normalize numbers and hostnames)
-Signature: "Database connection timeout after Ns connecting to db-host"
-         ↓ (hash)
-Result: "f5e4d3c2b1a0..." (same for both!)
-```
-
-### 3. Clustering
-
-Groups errors with the same signature within a 5-minute window:
-
-```
-10:30:10 - DB timeout → Create incident #1 (count: 1)
-10:30:15 - DB timeout → Update incident #1 (count: 2)
-10:30:20 - DB timeout → Update incident #1 (count: 3)
-10:36:00 - DB timeout → Create incident #2 (old one expired)
-```
-
-### 4. Analysis Decision Tree
-
-```
-New incident
-    ├─→ Try runbook matching
-    │   ├─→ High confidence (≥50%) → Use runbook
-    │   └─→ Low confidence (<50%) → Use LLM
-    └─→ Generate notification based on disposition
-```
-
-### 5. Alert Routing
-
-| Disposition      | Action               | Channel                    |
-| ---------------- | -------------------- | -------------------------- |
-| **ESCALATE**     | Critical alert       | Discord (ESCALATE webhook) |
-| **NEEDS_ONCALL** | On-call notification | Email                      |
-| **NEEDS_DEV**    | Development ticket   | Discord (DEV webhook)      |
-| **OBSERVE**      | Monitor only         | No notification            |
-| **NO_ACTION**    | Known noise          | No notification            |
-
----
-
-## 🗂️ Project Structure
-
-```
-log-analyzer/
-├── app/
-│   ├── main.py                 # FastAPI application
-│   ├── api/
-│   │   ├── routes_auth.py      # Authentication & registration
-│   │   ├── routes_ingest.py    # Log ingestion endpoint
-│   │   ├── routes_incidents.py # Incident management
-│   │   └── routes_dashboard.py # Dashboard HTML
-│   ├── core/
-│   │   ├── parser.py           # Log parsing logic
-│   │   ├── signatures.py       # Signature generation
-│   │   ├── clustering.py       # Time-based clustering
-│   │   ├── runbook_loader.py   # YAML runbook loader
-│   │   ├── runbook_matcher.py  # Pattern matching
-│   │   └── decision_engine.py  # LLM integration (Groq)
-│   ├── services/
-│   │   ├── storage.py          # PostgreSQL models
-│   │   ├── auth.py             # JWT & password hashing
-│   │   ├── notifications.py    # Discord & email alerts
-│   │   └── validators.py       # URL/webhook validation
-│   └── models/
-│       └── schemas.py          # Pydantic schemas
-├── runbooks/                   # YAML runbook definitions
-│   ├── db_connection_timeout.yaml
-│   ├── redis_connection.yaml
-│   ├── payment_failed.yaml
-│   └── ...
-├── .env                        # Environment variables
-└── requirements.txt
-
-log-analyzer-frontend/
-├── src/
-│   ├── components/
-│   │   ├── Login.jsx           # Login page
-│   │   ├── Register.jsx        # Registration form
-│   │   ├── Dashboard.jsx       # Main dashboard
-│   │   ├── IncidentCard.jsx    # Incident display
-│   │   ├── Settings.jsx        # Project settings
-│   │   └── Navbar.jsx          # Navigation
-│   ├── services/
-│   │   └── api.js              # API client
-│   ├── App.js
-│   └── index.js
-└── package.json
-
-log-server/
-├── main.py                     # FastAPI log generation server
-├── error_patterns.py           # Realistic error generators
-├── logger_config.py            # Logging setup
-├── traffic_generator.py        # HTTP traffic simulator
-├── log_shipper.py              # Log file tailer
-└── logs/
-    └── app.log                 # Generated logs
-```
-
----
-
-## 🔧 Configuration
-
-### Backend Environment Variables (`.env`)
-
-```env
-# Database
-DATABASE_URL=postgresql://log_user:password@localhost:5432/log_analyzer
-
-# JWT Authentication
-SECRET_KEY=your-secret-key-change-in-production
-
-# LLM
-GROQ_API_KEY=your-groq-api-key
-
-# Email (Default SMTP settings)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-```
-
-### Clustering Settings (`app/core/clustering.py`)
-
-```python
-CLUSTER_WINDOW_MINUTES = 5  # Time window for grouping
-MAX_SAMPLES = 10            # Max sample logs per incident
-```
-
-### Severity Thresholds (`app/api/routes_dashboard.py`)
-
-```python
-# Based on occurrence count:
-count >= 10 → CRITICAL
-count >= 5  → HIGH
-count >= 2  → MEDIUM
-count == 1  → LOW
-```
-
----
-
-## 📊 Database Schema
-
-### Projects Table
-
-```sql
-- id (UUID)
-- name (unique)
-- password_hash (bcrypt)
-- log_source_url
-- user_email
-- discord_webhook_escalate
-- discord_webhook_dev
-- created_at
-- is_active
-```
-
-### Incidents Table
-
-```sql
-- id (UUID)
-- project_id (FK)
-- source
-- environment
-- signature (indexed)
-- first_seen (indexed)
-- last_seen (indexed)
-- count
-- sample_lines (JSON)
-- status (indexed)
-```
-
-### Analyses Table
-
-```sql
-- id (UUID)
-- incident_id (FK)
-- severity
-- disposition
-- confidence
-- summary
-- next_steps (JSON)
-- matched_runbook_id
-- ticket_title
-- ticket_body
-- analysis_source (runbook/llm)
-```
-
----
-
-## 🔐 API Endpoints
+## API Documentation
 
 ### Authentication
 
-- `POST /api/auth/register` - Create new project
-- `POST /api/auth/login` - Login to project
-- `GET /api/auth/me` - Get current project info
-- `PUT /api/auth/settings` - Update project settings
-
-### Validation (Pre-registration)
-
-- `POST /api/auth/validate/url` - Validate log source URL
-- `POST /api/auth/validate/discord-escalate` - Test ESCALATE webhook
-- `POST /api/auth/validate/discord-dev` - Test DEV webhook
-- `POST /api/auth/validate/email` - Validate email format
-
-### Ingestion
-
-- `POST /api/ingest` - Receive log batches (requires auth)
-
-### Incidents
-
-- `GET /api/incidents` - List incidents (filterable)
-- `GET /api/incidents/{id}` - Get single incident
-- `POST /api/incidents/{id}/close` - Mark as resolved
-- `POST /api/incidents/{id}/ignore` - Ignore false positive
-
-### Visualization
-
-- `GET /api/dashboard` - Real-time HTML dashboard
-
----
-
-## 📈 Sample Metrics
-
-From a 5-minute test run:
-
-- **Logs Processed:** 1,247
-- **Incidents Created:** 23
-- **Runbook Matches:** 18 (78%)
-- **LLM Analysis:** 5 (22%)
-- **Clustering Accuracy:** ~95%
-- **Average LLM Latency:** 1.2s (Groq)
-- **Discord Alerts Sent:** 12
-- **Email Notifications:** 3
-
----
-
-## 🐛 Troubleshooting
-
-### "Cannot connect to PostgreSQL"
+**Register a new project:**
 
 ```bash
-# Check if PostgreSQL is running
-sudo systemctl status postgresql
-
-# Verify connection
-psql -U log_user -d log_analyzer -h localhost
+POST /api/auth/register
+{
+  "name": "my-project",
+  "password": "secure-password",
+  "log_source_url": "https://your-log-server.onrender.com",
+  "user_email": "oncall@example.com",
+  "discord_webhook_escalate": "https://discord.com/api/webhooks/...",
+  "discord_webhook_dev": "https://discord.com/api/webhooks/..."
+}
 ```
 
-### "Log source URL validation failed"
+**Login:**
 
-- Ensure log server is running on the specified URL
-- Check that the server returns JSON with `{"service": "...", "status": "running"}`
-- Verify firewall/network allows connection
+```bash
+POST /api/auth/login
+{
+  "name": "my-project",
+  "password": "secure-password"
+}
 
-### "Discord webhook validation failed"
+Response:
+{
+  "access_token": "eyJ...",
+  "token_type": "bearer",
+  "project": { ... }
+}
+```
 
-- Verify webhook URL format: `https://discord.com/api/webhooks/{id}/{token}`
-- Check that webhook hasn't been deleted in Discord
-- Ensure bot has permission to post in the channel
+### Log Ingestion
 
-### "LLM analysis not working"
+**Send logs:**
 
-- Verify `GROQ_API_KEY` in `.env`
-- Check Groq API quota: https://console.groq.com
-- Review analyzer logs for error messages
+```bash
+POST /api/ingest
+Headers: X-API-Key: <your-api-key>
+{
+  "source": "log-server",
+  "environment": "prod",
+  "logs": [
+    "[2024-02-15T10:30:00] ERROR: Database connection timeout",
+    "[2024-02-15T10:30:01] WARN: Slow request detected: 3.45s"
+  ]
+}
 
-### "No incidents appearing"
+Response:
+{
+  "incidents_created": 1,
+  "incidents_updated": 0,
+  "total_logs_processed": 2
+}
+```
 
-- Check that log shipper is running and connected
-- Verify traffic generator is creating errors
-- Ensure log level is ERROR/WARN (not INFO)
-- Check analyzer logs for parsing errors
+### Incident Management
 
----
+**List incidents:**
 
-## 📚 Technologies Used
+```bash
+GET /api/incidents?status=open&severity=high&limit=50
+Headers: Authorization: Bearer <jwt-token>
 
-### Backend
+Response:
+[
+  {
+    "id": "abc123...",
+    "source": "log-server",
+    "environment": "prod",
+    "signature": "log-server:ERROR:Database_connection_timeout",
+    "first_seen": "2024-02-15T10:30:00",
+    "last_seen": "2024-02-15T10:35:00",
+    "count": 12,
+    "status": "open",
+    "sample_lines": ["..."],
+    "analysis": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "confidence": 0.95,
+      "summary": "Database connection pool exhausted...",
+      "next_steps": ["Check DB server health", "Review pool settings"],
+      "ticket_title": "Database connection timeout",
+      "ticket_body": "...",
+      "analysis_source": "runbook"
+    }
+  }
+]
+```
 
-- **FastAPI** - Modern Python web framework
-- **PostgreSQL** - Production-grade relational database
-- **SQLAlchemy** - SQL toolkit and ORM
-- **LangChain** - LLM orchestration framework
-- **Groq** - Ultra-fast LLM inference (Llama 3.3 70B)
-- **Pydantic** - Data validation using Python type hints
-- **PassLib** - Password hashing (bcrypt)
-- **python-jose** - JWT token generation
+**Close incident:**
 
-### Frontend
+```bash
+POST /api/incidents/{incident_id}/close
+Headers: Authorization: Bearer <jwt-token>
+```
 
-- **React** - UI library
-- **React Router** - Client-side routing
-- **Axios** - HTTP client
-- **Recharts** - Data visualization
-- **Lucide React** - Icon library
+**Ignore incident:**
 
-### DevOps
+```bash
+POST /api/incidents/{incident_id}/ignore
+Headers: Authorization: Bearer <jwt-token>
+```
 
-- **Docker** - Containerization (coming soon)
-- **Docker Compose** - Multi-container orchestration
+### Log Server Control
 
----
+**Start log generation:**
 
-## 🚧 TODO / Roadmap
+```bash
+POST /api/log-server/start
+Headers: X-API-Key: <your-api-key>
 
-### Phase 1: Frontend Enhancement ✅
+Response:
+{
+  "message": "Log generation started",
+  "status": "running"
+}
+```
 
-- [x] React frontend with authentication
-- [x] Registration with live validation
-- [x] Dashboard with real-time updates
-- [x] Settings page for configuration
+**Stop log generation:**
 
-### Phase 2: Deployment (In Progress)
+```bash
+POST /api/log-server/stop
+Headers: X-API-Key: <your-api-key>
 
-- [ ] Docker Compose for full stack
-- [ ] Environment-based configuration
-- [ ] Production-ready setup guide
-- [ ] Health checks and monitoring
+Response:
+{
+  "message": "Stopped",
+  "stats": {
+    "logs_generated": 900,
+    "logs_shipped": 900,
+    "incidents_created": 45,
+    "incidents_updated": 120
+  },
+  "status": "idle"
+}
+```
 
-### Phase 3: Advanced Features
+**Check status:**
 
-- [ ] WebSocket for real-time dashboard updates
-- [ ] Advanced filtering and search
-- [ ] Analytics dashboard (charts & metrics)
-- [ ] Incident detail page with full history
-- [ ] Runbook editor UI
-- [ ] Feedback loop for analysis accuracy
+```bash
+GET /api/log-server/status
+Headers: X-API-Key: <your-api-key>
+```
 
-### Phase 4: Integrations
+## Usage Flow
 
-- [ ] GitHub Issues integration
-- [ ] Jira ticket creation
-- [ ] PagerDuty integration
-- [ ] Slack notifications (alternative to Discord)
+1. **Register a project** at https://log-anomaly.vercel.app
+   - Provide project name, password, and notification settings
+   - Copy your API key for log server configuration
 
-### Phase 5: ML Enhancements
+2. **Configure your log server** (or use the demo server)
+   - Set `ANALYZER_URL` to your analyzer endpoint
+   - Set `LOGSHIPPER_API_KEY` to your project API key
 
-- [ ] Fine-tune small model on collected data
-- [ ] Automatic runbook generation from patterns
-- [ ] Anomaly detection for unusual error spikes
-- [ ] Sentiment analysis on error messages
+3. **Start log generation** from the dashboard
+   - Generates 3 logs per second for 5 minutes
+   - Includes realistic error patterns
 
----
+4. **Monitor incidents** in the dashboard
+   - View real-time clustering and analysis
+   - Receive notifications via Discord or email
+   - Take action (close/ignore) as needed
 
-## 📝 License
+5. **Review analysis**
+   - Check severity and disposition
+   - Read AI-generated summary and next steps
+   - Use ticket draft for issue tracking
 
-MIT License - feel free to use this project for learning or portfolio purposes.
+## Error Patterns
 
----
+The log server simulates 10 types of production errors:
 
-## 📸 Screenshots
+1. **Database Timeouts** - Connection timeouts (30-60s)
+2. **NullPointerException** - Java-style NPEs with stack traces
+3. **Redis Connection Failures** - Connection refused, timeouts, readonly replicas
+4. **API Rate Limits** - Stripe, SendGrid, Twilio, AWS S3 throttling
+5. **Payment Failures** - Card declined, insufficient funds, expired cards
+6. **File Not Found** - Missing upload files
+7. **Out of Memory** - Java heap space exhaustion
+8. **Authentication Failures** - Expired tokens, invalid signatures
+9. **External Service Errors** - HTTP 500/502/503/504 responses
+10. **SQL Syntax Errors** - Missing tables, query failures
 
-### Registration with Live Validation
+## Limitations & Notes
 
-![Registration](docs/registration.png)
+- **5-minute clustering window** - Incidents are grouped within 5-minute windows
+- **Database cleanup on startup** - The analyzer wipes all incidents on restart (intended for demo/testing)
+- **Runbook caching** - Runbooks are loaded once at startup; requires restart to reload
+- **LLM rate limits** - Groq API has rate limits on the free tier
+- **Single log server** - Each project connects to one log source URL
 
-### Dashboard Overview
+## License
 
-![Dashboard](docs/dashboard.png)
-
-### Runbook Match
-
-![Runbook Match](docs/runbook-match.png)
-
-### AI Analysis with Ticket Draft
-
-![AI Analysis](docs/ai-analysis.png)
-
-### Settings Page
-
-![Settings](docs/settings.png)
-
----
+This is a personal project. Feel free to use and modify as needed.
