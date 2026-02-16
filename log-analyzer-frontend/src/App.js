@@ -34,7 +34,7 @@ function App() {
   useEffect(() => {
     const wake = async (name, url) => {
       try {
-        await axios.get(url, { timeout: 30000 });
+        await axios.get(url, { timeout: 120000 });
         setStatus((s) => ({ ...s, [name]: "up" }));
         return true;
       } catch {
