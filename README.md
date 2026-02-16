@@ -1,12 +1,12 @@
 # Log Anomaly
 
-A full-stack log monitoring and incident management system that automatically detects, clusters, analyzes, and routes production errors using pattern matching and LLM-based analysis.
+An agentic log monitoring system that autonomously detects, clusters, analyzes, and routes production errors using pattern matching and LLM-based decision-making.
 
 **Live Demo:** https://log-anomaly.vercel.app
 
 ## Overview
 
-Log Anomaly helps you make sense of application logs by automatically grouping similar errors, analyzing their severity, and routing notifications to the right people through Discord or email. It uses a combination of runbook-based pattern matching and AI-powered analysis to provide actionable insights.
+Log Anomaly Agent autonomously processes application logs by grouping similar errors, analyzing their severity, and routing notifications to the right people through Discord or email. The agent uses runbook-based pattern matching for known errors and LLM-powered analysis for unknown patterns, making intelligent triage decisions without manual intervention.
 
 The system consists of three main components:
 
@@ -30,6 +30,12 @@ The system consists of three main components:
 
 **Settings Page**
 ![Settings](imgs/settings.jpeg)
+
+**Discord Message**
+![Discord](imgs/discord.png)
+
+**Email**
+![Email](imgs/email.png)
 
 ## Architecture
 
