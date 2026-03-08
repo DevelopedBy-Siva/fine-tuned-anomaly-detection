@@ -1,15 +1,29 @@
 import os
+import threading
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-
 from app.services.storage import init_db
 from app.services.cleanup import cleanup_all_data
 from app.api import routes_ingest, routes_incidents, routes_auth
-
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def start_worker():
+    import traceback
+
+    print("[MAIN] Starting worker thread...")
+    try:
+        print("[MAIN] Importing worker.stream...")
+        from worker.stream import run as run_worker
+
+        print("[MAIN] Import successful, calling run...")
+        run_worker()
+    except Exception as e:
+        print(f"[MAIN] Worker thread failed: {e}")
+        traceback.print_exc()
 
 
 @asynccontextmanager
@@ -17,12 +31,17 @@ async def lifespan(app: FastAPI):
     print("Starting Log Analyzer...")
     init_db()
     cleanup_all_data()
+
+    worker_thread = threading.Thread(target=start_worker, daemon=True)
+    worker_thread.start()
+    print("[MAIN] Worker thread started")
+
     yield
+
     print("Shutting down...")
 
 
 app = FastAPI(title="Log Analyzer", lifespan=lifespan)
-
 
 cors_origins = os.getenv("CORS_ORIGINS")
 origins = [origin.strip() for origin in cors_origins.split(",") if origin]
@@ -52,5 +71,4 @@ def root():
 
 @app.get("/health")
 def health_check():
-    """Health check endpoint for monitoring"""
     return {"status": "healthy"}
