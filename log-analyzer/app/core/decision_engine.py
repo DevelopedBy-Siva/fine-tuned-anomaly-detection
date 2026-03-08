@@ -1,4 +1,5 @@
 import os
+import random
 from typing import Optional
 from langchain_groq import ChatGroq
 from langchain.prompts import ChatPromptTemplate
@@ -10,8 +11,6 @@ load_dotenv()
 
 
 class IncidentAnalysis(BaseModel):
-    """Structured output from LLM"""
-
     severity: str = Field(description="Severity level: low, medium, high, or critical")
     disposition: str = Field(
         description="Action to take: NO_ACTION, OBSERVE, NEEDS_DEV, NEEDS_ONCALL, or ESCALATE"
@@ -26,8 +25,6 @@ class IncidentAnalysis(BaseModel):
 
 
 def validate_analysis(analysis: IncidentAnalysis, incident) -> IncidentAnalysis:
-    """Validate and correct analysis output to ensure consistency"""
-
     critical_patterns = [
         "outofmemoryerror",
         "heap space",
@@ -37,7 +34,6 @@ def validate_analysis(analysis: IncidentAnalysis, incident) -> IncidentAnalysis:
         "fatal error",
         "stack overflow",
     ]
-
     high_patterns = [
         "database connection",
         "connection refused",
@@ -48,22 +44,19 @@ def validate_analysis(analysis: IncidentAnalysis, incident) -> IncidentAnalysis:
         "connection pool",
     ]
 
-    signature_lower = incident.signature.lower()
     sample_text = " ".join(incident.sample_lines or []).lower()
-    full_text = f"{signature_lower} {sample_text}"
+    full_text = f"{incident.signature.lower()} {sample_text}"
 
     if any(pattern in full_text for pattern in critical_patterns):
         if analysis.severity not in ["critical", "high"]:
             analysis.severity = "critical"
         if analysis.disposition not in ["ESCALATE", "NEEDS_ONCALL"]:
             analysis.disposition = "ESCALATE"
-
     elif any(pattern in full_text for pattern in high_patterns):
         if analysis.severity == "low":
             analysis.severity = "high"
 
     analysis.severity = analysis.severity.lower().strip()
-
     analysis.disposition = analysis.disposition.upper().strip()
 
     if analysis.severity == "critical" and analysis.disposition not in [
@@ -71,14 +64,12 @@ def validate_analysis(analysis: IncidentAnalysis, incident) -> IncidentAnalysis:
         "NEEDS_ONCALL",
     ]:
         analysis.disposition = "ESCALATE"
-
     if analysis.severity == "high" and analysis.disposition not in [
         "ESCALATE",
         "NEEDS_ONCALL",
         "NEEDS_DEV",
     ]:
         analysis.disposition = "NEEDS_ONCALL"
-
     if analysis.disposition == "ESCALATE" and analysis.severity not in [
         "critical",
         "high",
@@ -89,31 +80,43 @@ def validate_analysis(analysis: IncidentAnalysis, incident) -> IncidentAnalysis:
 
     if not analysis.ticket_title or not analysis.ticket_title.strip():
         analysis.ticket_title = f"{incident.source} - {incident.signature[:50]}"
-
     if len(analysis.ticket_title) > 100:
         analysis.ticket_title = analysis.ticket_title[:97] + "..."
 
     return analysis
 
 
+def _get_groq_keys() -> list[str]:
+    """
+    Collect all configured Groq API keys.
+    Env vars: GROQ_API_KEY, GROQ_API_KEY_2, GROQ_API_KEY_3
+    Any that are set and non-empty are included.
+    """
+    keys = []
+    for var in ["GROQ_API_KEY", "GROQ_API_KEY_2", "GROQ_API_KEY_3"]:
+        val = os.getenv(var, "").strip()
+        if val:
+            keys.append(val)
+    return keys
+
+
+def _make_llm() -> Optional[ChatGroq]:
+    """Pick a random key and return a ChatGroq client."""
+    keys = _get_groq_keys()
+    if not keys:
+        print("Warning: No GROQ_API_KEY found. LLM analysis disabled.")
+        return None
+    key = random.choice(keys)
+    return ChatGroq(
+        model="llama-3.3-70b-versatile",
+        temperature=0.3,
+        api_key=key,
+    )
+
+
 class DecisionEngine:
-    """LangChain-based decision engine for incident analysis"""
-
     def __init__(self):
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            print("Warning: GROQ_API_KEY not found. LLM analysis disabled.")
-            self.llm = None
-            return
-
-        self.llm = ChatGroq(
-            model="llama-3.3-70b-versatile",
-            temperature=0.3,
-            api_key=api_key,
-        )
-
         self.parser = PydanticOutputParser(pydantic_object=IncidentAnalysis)
-
         self.prompt = ChatPromptTemplate.from_messages(
             [
                 (
@@ -146,8 +149,6 @@ Disposition guidelines (must align with severity):
 - If disposition is ESCALATE → severity MUST be CRITICAL or HIGH
 - ALWAYS provide a ticket_title (never null or empty)
 
-Be concise, actionable, and technical.
-
 {format_instructions}""",
                 ),
                 (
@@ -175,19 +176,15 @@ IMPORTANT REMINDERS:
         )
 
     def analyze_incident(self, incident) -> Optional[IncidentAnalysis]:
-        """
-        Analyze an incident using LLM and return structured output.
-
-        Returns None if LLM is not configured or analysis fails.
-        """
-        if not self.llm:
+        # fresh random key on every call — rotates across all configured keys
+        llm = _make_llm()
+        if not llm:
             return None
 
         try:
             sample_logs = (
                 "\n".join(incident.sample_lines[:3]) if incident.sample_lines else "N/A"
             )
-
             formatted_prompt = self.prompt.format_messages(
                 format_instructions=self.parser.get_format_instructions(),
                 source=incident.source,
@@ -197,13 +194,9 @@ IMPORTANT REMINDERS:
                 last_seen=incident.last_seen.strftime("%Y-%m-%d %H:%M:%S"),
                 sample_logs=sample_logs,
             )
-
-            response = self.llm.invoke(formatted_prompt)
-
+            response = llm.invoke(formatted_prompt)
             analysis = self.parser.parse(response.content)
-
             analysis = validate_analysis(analysis, incident)
-
             return analysis
 
         except Exception as e:
@@ -215,7 +208,6 @@ _decision_engine: Optional[DecisionEngine] = None
 
 
 def get_decision_engine() -> DecisionEngine:
-    """Get or create singleton decision engine"""
     global _decision_engine
     if _decision_engine is None:
         _decision_engine = DecisionEngine()

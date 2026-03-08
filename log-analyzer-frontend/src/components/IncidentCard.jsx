@@ -56,6 +56,7 @@ function IncidentCard({ incident, analysis, onClose, onIgnore }) {
     try {
       await onClose(incident.id);
     } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -64,6 +65,7 @@ function IncidentCard({ incident, analysis, onClose, onIgnore }) {
     try {
       await onIgnore(incident.id);
     } finally {
+      setIsProcessing(false);
     }
   };
 

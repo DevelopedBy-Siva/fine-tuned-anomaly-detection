@@ -24,7 +24,7 @@ def get_redis() -> redis.Redis:
 
 def ensure_consumer_group(r: redis.Redis):
     try:
-        r.xgroup_create(STREAM_KEY, GROUP_NAME, id="$", mkstream=True)
+        r.xgroup_create(STREAM_KEY, GROUP_NAME, id="0-0", mkstream=True)
         print(f"[WORKER] Created consumer group '{GROUP_NAME}'")
     except redis.exceptions.ResponseError as e:
         if "BUSYGROUP" in str(e):
@@ -53,6 +53,8 @@ def reclaim_stuck_entries(r: redis.Redis):
 
 
 def process_entry(r: redis.Redis, entry_id: str, fields: dict):
+    # FIX 2: only ACK if processing succeeded — failed entries stay pending
+    # and will be reclaimed by XAUTOCLAIM after RECLAIM_IDLE_MS
     try:
         logs = json.loads(fields.get("logs", "[]"))
         payload = {
@@ -65,14 +67,14 @@ def process_entry(r: redis.Redis, entry_id: str, fields: dict):
         r.xack(STREAM_KEY, GROUP_NAME, entry_id)
         print(f"[WORKER] ACKed {entry_id} ({len(logs)} logs)")
     except Exception as e:
-        print(f"[WORKER] Failed {entry_id}: {e}")
+        # don't ACK — entry stays in PEL and will be reclaimed after idle timeout
+        print(f"[WORKER] Failed {entry_id} — not ACKing, will retry: {e}")
 
 
 def run():
     print(
         f"[WORKER] Starting — stream='{STREAM_KEY}' group='{GROUP_NAME}' consumer='{CONSUMER_NAME}'"
     )
-
     print("[WORKER] Importing tasks...")
     from worker.tasks import process_log_batch as _process_log_batch
 
@@ -88,6 +90,7 @@ def run():
     except Exception as e:
         print(f"[WORKER] Redis connection failed: {e}")
         return
+
     ensure_consumer_group(r)
 
     while True:

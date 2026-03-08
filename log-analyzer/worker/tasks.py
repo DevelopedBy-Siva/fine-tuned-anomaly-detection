@@ -1,12 +1,12 @@
 import os
 import json
 import redis
-from datetime import datetime, timedelta
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
 
-CLUSTER_WINDOW_MINUTES = 5
+CLUSTER_WINDOW_MINUTES = 2
 MAX_SAMPLES = 10
 
 _redis_client = None
@@ -15,42 +15,25 @@ _redis_client = None
 def get_redis() -> redis.Redis:
     global _redis_client
     if _redis_client is None:
-        _redis_client = redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379"))
+        _redis_client = redis.from_url(
+            os.getenv("REDIS_URL", "redis://localhost:6379"),
+            decode_responses=True,
+        )
     return _redis_client
 
 
-def cluster_log_redis(
-    project_id: str,
-    source: str,
-    environment: str,
-    parsed_log,
-    signature: str,
-):
+def cluster_log_redis(project_id, source, environment, parsed_log, signature):
     from app.services.storage import Incident, SessionLocal
 
-    """
-    Find or create an incident using Redis as the clustering cache.
-
-    Redis key: cluster:{project_id}:{signature}
-    Value: incident_id (string)
-    TTL: CLUSTER_WINDOW_MINUTES
-
-    This replaces the DB-query-based clustering in clustering.py.
-    Workers share the same Redis so there are no race conditions from
-    multiple worker processes using separate in-memory dicts.
-    """
     r = get_redis()
     cache_key = f"cluster:{project_id}:{signature}"
-    ttl_seconds = CLUSTER_WINDOW_MINUTES * 60
-
+    ttl_seconds = int(CLUSTER_WINDOW_MINUTES * 60)
     cached = r.get(cache_key)
 
     db = SessionLocal()
     try:
         if cached:
-            incident_id = cached.decode()
-            incident = db.query(Incident).filter(Incident.id == incident_id).first()
-
+            incident = db.query(Incident).filter(Incident.id == cached).first()
             if incident and incident.status == "open":
                 incident.count += 1
                 incident.last_seen = datetime.utcnow()
@@ -60,9 +43,8 @@ def cluster_log_redis(
                     incident.sample_lines = lines
                 db.commit()
                 db.refresh(incident)
-
                 r.expire(cache_key, ttl_seconds)
-                return incident
+                return incident, False
 
         new_incident = Incident(
             project_id=project_id,
@@ -78,107 +60,106 @@ def cluster_log_redis(
         db.add(new_incident)
         db.commit()
         db.refresh(new_incident)
-
         r.setex(cache_key, ttl_seconds, new_incident.id)
-        return new_incident
+        return new_incident, True
 
     finally:
         db.close()
 
 
-def analyze_incident(incident, project):
-    from app.services.storage import Analysis, SessionLocal
+def analyze_incident(incident, project_id: str, force: bool = False):
+    from app.services.storage import Analysis, Project, SessionLocal
     from app.core.runbook_matcher import match_runbook, should_escalate
     from app.core.decision_engine import get_decision_engine
     from app.services.notifications import get_notification_service
 
-    """
-    Run runbook matching or LLM analysis on an incident, save result to DB,
-    and send notifications. Called only for new/low-count incidents.
-    """
     db = SessionLocal()
     try:
         existing = (
             db.query(Analysis).filter(Analysis.incident_id == incident.id).first()
         )
-        if existing:
-            return
+        if existing and not force:
+            return None
+
+        project = db.query(Project).filter(Project.id == project_id).first()
+        if not project:
+            print(f"[WORKER] Project {project_id} not found — skipping analysis")
+            return None
 
         notification_service = get_notification_service(project=project)
-        decision_engine = get_decision_engine()
-
         runbook, score = match_runbook(incident)
 
         if runbook and score >= 0.5:
+            # runbook matched — no LLM call, use runbook data directly
             disposition = runbook.disposition
-
             if disposition == "OBSERVE" and should_escalate(incident, runbook):
                 disposition = runbook.observe_threshold.get("escalate_to", "ESCALATE")
 
-            analysis = Analysis(
-                incident_id=incident.id,
-                severity=runbook.default_severity,
-                disposition=disposition,
-                confidence=score,
-                summary=f"{runbook.name}: {runbook.description}",
-                next_steps=runbook.steps,
-                matched_runbook_id=runbook.id,
-                runbook_match_score=score,
-                analysis_source="runbook",
-            )
+            new_severity = runbook.default_severity
+            new_disposition = disposition
+            new_confidence = score
+            new_summary = f"{runbook.name}: {runbook.description}"
+            new_next_steps = runbook.steps
+            new_ticket_title = runbook.name
+            new_ticket_body = "\n".join(runbook.steps)
+            new_source = "runbook"
+            matched_runbook_id = runbook.id
+            runbook_match_score = score
         else:
+            # no runbook match — LLM only for unknown errors
+            decision_engine = get_decision_engine()
             llm_analysis = decision_engine.analyze_incident(incident)
-
             if not llm_analysis:
-                print(f"[WORKER] LLM analysis returned None for incident {incident.id}")
-                return
+                print(f"[WORKER] LLM returned None for incident {incident.id}")
+                return None
+            new_severity = llm_analysis.severity
+            new_disposition = llm_analysis.disposition
+            new_confidence = llm_analysis.confidence
+            new_summary = llm_analysis.summary
+            new_next_steps = llm_analysis.next_steps
+            new_ticket_title = llm_analysis.ticket_title
+            new_ticket_body = llm_analysis.ticket_body
+            new_source = "llm"
+            matched_runbook_id = None
+            runbook_match_score = None
 
+        if existing and force:
+            existing.severity = new_severity
+            existing.disposition = new_disposition
+            existing.confidence = new_confidence
+            existing.summary = new_summary
+            existing.next_steps = new_next_steps
+            existing.ticket_title = new_ticket_title
+            existing.ticket_body = new_ticket_body
+            existing.analysis_source = new_source
+            existing.created_at = datetime.utcnow()
+            db.commit()
+            db.refresh(existing)
+            analysis = existing
+        else:
             analysis = Analysis(
                 incident_id=incident.id,
-                severity=llm_analysis.severity,
-                disposition=llm_analysis.disposition,
-                confidence=llm_analysis.confidence,
-                summary=llm_analysis.summary,
-                next_steps=llm_analysis.next_steps,
-                ticket_title=llm_analysis.ticket_title,
-                ticket_body=llm_analysis.ticket_body,
-                analysis_source="llm",
+                severity=new_severity,
+                disposition=new_disposition,
+                confidence=new_confidence,
+                summary=new_summary,
+                next_steps=new_next_steps,
+                ticket_title=new_ticket_title,
+                ticket_body=new_ticket_body,
+                analysis_source=new_source,
+                matched_runbook_id=matched_runbook_id,
+                runbook_match_score=runbook_match_score,
             )
-
-        db.add(analysis)
-        db.commit()
-        db.refresh(analysis)
+            db.add(analysis)
+            db.commit()
+            db.refresh(analysis)
 
         notification_service.route_notification(incident, analysis)
         print(
-            f"[WORKER] Analysis complete for incident {incident.id} — {analysis.severity}/{analysis.disposition}"
+            f"[WORKER] Analysis {'updated' if force else 'created'} for incident "
+            f"{incident.id} (count={incident.count}) — {analysis.severity}/{analysis.disposition}"
         )
-
-        try:
-            import redis as _redis
-            import os
-
-            r_pub = _redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379"))
-            channel = f"incidents:{incident.project_id}"
-            payload = json.dumps(
-                {
-                    "id": incident.id,
-                    "source": incident.source,
-                    "environment": incident.environment,
-                    "signature": incident.signature,
-                    "count": incident.count,
-                    "status": incident.status,
-                    "first_seen": incident.first_seen.isoformat(),
-                    "last_seen": incident.last_seen.isoformat(),
-                    "severity": analysis.severity,
-                    "disposition": analysis.disposition,
-                    "summary": analysis.summary,
-                }
-            )
-            r_pub.publish(channel, payload)
-            print(f"[WORKER] Published to channel '{channel}'")
-        except Exception as pub_err:
-            print(f"[WORKER] Pub/sub publish failed (non-critical): {pub_err}")
+        return analysis
 
     except Exception as e:
         print(f"[WORKER] analyze_incident failed for {incident.id}: {e}")
@@ -194,24 +175,6 @@ def process_log_batch(payload: dict):
     from app.core.signatures import generate_signature
     from app.services.storage import SessionLocal, Project
 
-    """
-    RQ job entry point.
-
-    payload = {
-        "project_id": str,
-        "project_name": str,          # for logging
-        "source": str,
-        "environment": str,
-        "logs": [str, ...],
-
-        # Project notification config passed directly so worker
-        # doesn't need to re-query DB for every batch
-        "log_source_url": str,
-        "user_email": str,
-        "discord_webhook_escalate": str,
-        "discord_webhook_dev": str,
-    }
-    """
     api_key = payload.get("api_key", "")
     source = payload["source"]
     environment = payload["environment"]
@@ -224,23 +187,23 @@ def process_log_batch(payload: dict):
             print(f"[WORKER] No project found for api_key — skipping batch")
             return
         project_id = project.id
-        print(f"[WORKER] Processing {len(logs)} logs for project '{project.name}'")
+        project_name = project.name
+        print(f"[WORKER] Processing {len(logs)} logs for project '{project_name}'")
     finally:
         db.close()
 
     created = 0
     updated = 0
+    failed = 0
 
     for log_line in logs:
         try:
             parsed = ParsedLog(log_line)
-
             if parsed.level not in ["ERROR", "WARN", "WARNING", "CRITICAL"]:
                 continue
 
             sig = generate_signature(source, parsed)
-
-            incident = cluster_log_redis(
+            incident, is_new = cluster_log_redis(
                 project_id=project_id,
                 source=source,
                 environment=environment,
@@ -248,17 +211,28 @@ def process_log_batch(payload: dict):
                 signature=sig,
             )
 
-            if incident.count <= 3:
-                analyze_incident(incident, project)
-
-            if incident.count == 1:
+            if is_new:
+                analyze_incident(incident, project_id, force=False)
                 created += 1
             else:
+                if incident.count in {5, 10, 20}:
+                    analyze_incident(incident, project_id, force=True)
                 updated += 1
 
         except Exception as e:
             print(f"[WORKER] Failed to process log line: {e} | line: {log_line[:100]}")
+            failed += 1
             continue
 
-    print(f"[WORKER] Batch done — created: {created}, updated: {updated}")
-    return {"incidents_created": created, "incidents_updated": updated}
+    print(
+        f"[WORKER] Batch done — created: {created}, updated: {updated}, failed: {failed}"
+    )
+
+    if failed > 0 and created == 0 and updated == 0:
+        raise RuntimeError(f"Batch entirely failed — {failed} lines errored")
+
+    return {
+        "incidents_created": created,
+        "incidents_updated": updated,
+        "failed": failed,
+    }
