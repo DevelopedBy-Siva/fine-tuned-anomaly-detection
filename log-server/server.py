@@ -18,7 +18,7 @@ app = FastAPI(title="Log Server")
 API_KEY = os.getenv("LOGSHIPPER_API_KEY")  
 REDIS_URL = os.getenv("REDIS_URL")
 STREAM_KEY = os.getenv("STREAM_KEY", "logs:stream")
-STREAM_MAXLEN = 10_000                         
+STREAM_MAXLEN = 10_000                       
 
 cors_origins = os.getenv("CORS_ORIGINS", "")
 origins = [o.strip() for o in cors_origins.split(",") if o.strip()]
@@ -30,6 +30,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 _redis_client = None
 
@@ -165,7 +166,6 @@ class InMemoryHandler(logging.Handler):
         self.buffer.append(self.format(record))
 
 
-
 class LogGenerator:
 
     def __init__(self):
@@ -205,7 +205,7 @@ class LogGenerator:
                 for _ in range(3):
                     self._generate_log()
 
-                if len(self.log_buffer) >= 10:
+                if self.log_buffer:
                     await self._push_to_stream()
 
                 await asyncio.sleep(1)
