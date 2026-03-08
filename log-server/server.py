@@ -4,26 +4,24 @@ import asyncio
 import random
 import logging
 import os
+import json
 from datetime import datetime
-import requests
 from collections import deque
 from dotenv import load_dotenv
+import redis
 
 load_dotenv()
 
 app = FastAPI(title="Log Server")
 
 
-def verify_api_key(x_api_key: str = Header(None)):
-    if x_api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+API_KEY = os.getenv("LOGSHIPPER_API_KEY")  
+REDIS_URL = os.getenv("REDIS_URL")
+STREAM_KEY = os.getenv("STREAM_KEY", "logs:stream")
+STREAM_MAXLEN = 10_000                         
 
-
-ANALYZER_URL = os.getenv("ANALYZER_URL")
-API_KEY = os.getenv("LOGSHIPPER_API_KEY")
-
-cors_origins = os.getenv("CORS_ORIGINS")
-origins = [origin.strip() for origin in cors_origins.split(",") if origin]
+cors_origins = os.getenv("CORS_ORIGINS", "")
+origins = [o.strip() for o in cors_origins.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
@@ -33,7 +31,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-log_generator = None
+_redis_client = None
+
+
+def get_redis() -> redis.Redis:
+    global _redis_client
+    if _redis_client is None:
+        if not REDIS_URL:
+            raise RuntimeError("REDIS_URL environment variable not set")
+        _redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+    return _redis_client
+
+
+
+def verify_api_key(x_api_key: str = Header(None)):
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
 
 
 class ErrorPatterns:
@@ -80,8 +94,7 @@ class ErrorPatterns:
             "ExpiredCardException: Card expired",
             "SecurityCodeMismatch: CVV verification failed",
         ]
-        error = random.choice(reasons)
-        return f"Payment processing failed for {order_id}: {error}"
+        return f"Payment processing failed for {order_id}: {random.choice(reasons)}"
 
     @staticmethod
     def file_not_found():
@@ -97,25 +110,19 @@ class ErrorPatterns:
     @staticmethod
     def auth_failed():
         token = "".join(random.choices("abcdef0123456789", k=16))
-        reason = random.choice(
-            [
-                "Token expired",
-                "Invalid signature",
-                "Token revoked",
-                "Insufficient permissions",
-            ]
-        )
+        reason = random.choice([
+            "Token expired", "Invalid signature",
+            "Token revoked", "Insufficient permissions",
+        ])
         return f"Authentication failed: {reason} (token={token})"
 
     @staticmethod
     def external_service_down():
-        service = random.choice(
-            [
-                "email-service.internal:8080",
-                "notification-service.internal:9000",
-                "analytics-service.internal:8081",
-            ]
-        )
+        service = random.choice([
+            "email-service.internal:8080",
+            "notification-service.internal:9000",
+            "analytics-service.internal:8081",
+        ])
         code = random.choice([500, 502, 503, 504])
         return f"External service unavailable: {service} returned HTTP {code}"
 
@@ -142,6 +149,7 @@ ERROR_RATE = 0.15
 SLOW_REQUEST_RATE = 0.05
 
 
+
 class CustomFormatter(logging.Formatter):
     def format(self, record):
         timestamp = datetime.fromtimestamp(record.created).isoformat()
@@ -157,32 +165,27 @@ class InMemoryHandler(logging.Handler):
         self.buffer.append(self.format(record))
 
 
+
 class LogGenerator:
 
-    def __init__(self, analyzer_url, api_key):
-        self.analyzer_url = analyzer_url
-        self.api_key = api_key
+    def __init__(self):
         self.running = False
         self.log_buffer = deque(maxlen=20)
-
         self.stats = {
             "logs_generated": 0,
             "logs_shipped": 0,
-            "incidents_created": 0,
-            "incidents_updated": 0,
+            "batches_pushed": 0,
+            "push_errors": 0,
         }
-
         self.logger = self._setup_logger()
 
     def _setup_logger(self):
         logger = logging.getLogger("log-generator")
         logger.setLevel(logging.INFO)
         logger.handlers = []
-
         handler = InMemoryHandler(self.log_buffer)
         handler.setFormatter(CustomFormatter())
         logger.addHandler(handler)
-
         return logger
 
     async def run(self, duration=300):
@@ -190,29 +193,25 @@ class LogGenerator:
         self.stats = {
             "logs_generated": 0,
             "logs_shipped": 0,
-            "incidents_created": 0,
-            "incidents_updated": 0,
+            "batches_pushed": 0,
+            "push_errors": 0,
         }
-
-        print(f"[LOG-SERVER] Starting generation for {duration}s")
+        print(f"[LOG-SERVER] Starting generation for {duration}s → Redis Stream '{STREAM_KEY}'")
 
         start_time = asyncio.get_event_loop().time()
 
         try:
-            while (
-                self.running and asyncio.get_event_loop().time() - start_time < duration
-            ):
-
+            while self.running and asyncio.get_event_loop().time() - start_time < duration:
                 for _ in range(3):
-                    self.generate_log()
+                    self._generate_log()
 
                 if len(self.log_buffer) >= 10:
-                    await self.ship_logs()
+                    await self._push_to_stream()
 
                 await asyncio.sleep(1)
 
             if self.log_buffer:
-                await self.ship_logs()
+                await self._push_to_stream()
 
             self.running = False
             print(f"[LOG-SERVER] Finished. Stats: {self.stats}")
@@ -221,16 +220,14 @@ class LogGenerator:
             self.running = False
             print("[LOG-SERVER] Cancelled")
 
-    def generate_log(self):
+    def _generate_log(self):
         self.stats["logs_generated"] += 1
 
         if random.random() < ERROR_RATE:
             self.logger.error(random.choice(ERROR_GENERATORS)())
-
         elif random.random() < SLOW_REQUEST_RATE:
             delay = random.uniform(2, 5)
             self.logger.warning(f"Slow request detected: {delay:.2f}s")
-
         else:
             endpoints = [
                 "User lookup: user_id={}",
@@ -242,7 +239,16 @@ class LogGenerator:
             msg = random.choice(endpoints).format(random.randint(1000, 9999))
             self.logger.info(msg)
 
-    async def ship_logs(self):
+    async def _push_to_stream(self):
+        """
+        Push buffered logs to Redis Stream using XADD.
+
+        Stream entry fields:
+            project_id  → identifies which project (replaces API key auth)
+            source      → "log-server"
+            environment → "prod"
+            logs        → JSON-encoded list of log line strings
+        """
         if not self.log_buffer:
             return
 
@@ -250,62 +256,62 @@ class LogGenerator:
         self.log_buffer.clear()
 
         try:
-            response = requests.post(
-                self.analyzer_url,
-                json={
+            r = get_redis()
+
+            r.xadd(
+                STREAM_KEY,
+                {
+                    "api_key": API_KEY or "",  
                     "source": "log-server",
                     "environment": "prod",
-                    "logs": logs,
+                    "logs": json.dumps(logs),
                 },
-                headers={"X-API-Key": self.api_key} if self.api_key else {},
-                timeout=10,
+                maxlen=STREAM_MAXLEN,
+                approximate=True,  
             )
 
-            if response.status_code == 200:
-                data = response.json()
-
-                self.stats["logs_shipped"] += data.get(
-                    "total_logs_processed", len(logs)
-                )
-                self.stats["incidents_created"] += data.get("incidents_created", 0)
-                self.stats["incidents_updated"] += data.get("incidents_updated", 0)
-
-                print(f"[LOG-SERVER] Shipped {len(logs)} logs")
-
-            else:
-                self.log_buffer.extend(logs)
+            self.stats["logs_shipped"] += len(logs)
+            self.stats["batches_pushed"] += 1
+            print(f"[LOG-SERVER] Pushed {len(logs)} logs to stream")
 
         except Exception as e:
-            print(f"[LOG-SERVER] Ship failed: {e}")
-            self.log_buffer.extend(logs)
+            print(f"[LOG-SERVER] Stream push failed: {e}")
+            self.stats["push_errors"] += 1
+            self.log_buffer.extendleft(reversed(logs))
 
     def stop(self):
         self.running = False
         print("[LOG-SERVER] Stopping...")
 
 
+
+log_generator = None
+
+
 @app.on_event("startup")
 async def startup_event():
     global log_generator
-    log_generator = LogGenerator(ANALYZER_URL, API_KEY)
-    print("[LOG-SERVER] Initialized")
+    log_generator = LogGenerator()
+    try:
+        get_redis().ping()
+        print(f"[LOG-SERVER] Redis connected. Stream key: '{STREAM_KEY}'")
+    except Exception as e:
+        print(f"[LOG-SERVER] WARNING: Redis not reachable on startup: {e}")
+
 
 
 @app.post("/api/start", dependencies=[Depends(verify_api_key)])
 async def start_generation():
     if log_generator.running:
         return {"error": "Already running", "status": "running"}
-
     asyncio.create_task(log_generator.run(duration=300))
-
-    return {"message": "Log generation started", "status": "running"}
+    return {"message": "Log generation started", "status": "running", "stream": STREAM_KEY}
 
 
 @app.post("/api/stop", dependencies=[Depends(verify_api_key)])
 async def stop_generation():
     if not log_generator.running:
         return {"error": "Not running", "status": "idle"}
-
     log_generator.stop()
     return {"message": "Stopped", "stats": log_generator.stats, "status": "idle"}
 
@@ -315,12 +321,19 @@ async def get_status():
     return {
         "status": "running" if log_generator.running else "idle",
         "stats": log_generator.stats,
+        "stream": STREAM_KEY,
     }
 
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy"}
+    redis_ok = False
+    try:
+        get_redis().ping()
+        redis_ok = True
+    except Exception:
+        pass
+    return {"status": "healthy", "redis": "connected" if redis_ok else "disconnected"}
 
 
 @app.get("/")
@@ -328,6 +341,8 @@ async def root():
     return {
         "service": "log-server",
         "status": "running",
+        "transport": "redis-stream",
+        "stream_key": STREAM_KEY,
         "endpoints": {
             "start": "POST /api/start",
             "stop": "POST /api/stop",
@@ -338,5 +353,4 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=5001)
