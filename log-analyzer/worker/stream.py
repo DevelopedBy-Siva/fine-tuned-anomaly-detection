@@ -53,8 +53,6 @@ def reclaim_stuck_entries(r: redis.Redis):
 
 
 def process_entry(r: redis.Redis, entry_id: str, fields: dict):
-    # FIX 2: only ACK if processing succeeded — failed entries stay pending
-    # and will be reclaimed by XAUTOCLAIM after RECLAIM_IDLE_MS
     try:
         logs = json.loads(fields.get("logs", "[]"))
         payload = {
@@ -67,7 +65,6 @@ def process_entry(r: redis.Redis, entry_id: str, fields: dict):
         r.xack(STREAM_KEY, GROUP_NAME, entry_id)
         print(f"[WORKER] ACKed {entry_id} ({len(logs)} logs)")
     except Exception as e:
-        # don't ACK — entry stays in PEL and will be reclaimed after idle timeout
         print(f"[WORKER] Failed {entry_id} — not ACKing, will retry: {e}")
 
 

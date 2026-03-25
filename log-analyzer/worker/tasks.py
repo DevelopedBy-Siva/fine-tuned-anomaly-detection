@@ -1,13 +1,15 @@
 import os
 import json
 import redis
-from datetime import datetime
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
 
 CLUSTER_WINDOW_MINUTES = 2
 MAX_SAMPLES = 10
+
+ROOT_CAUSE_LOOKBACK_MINUTES = 10
 
 _redis_client = None
 
@@ -67,6 +69,63 @@ def cluster_log_redis(project_id, source, environment, parsed_log, signature):
         db.close()
 
 
+def _fetch_recent_root_cause_candidates(project_id: str, new_incident_id: str) -> list:
+    """
+    Return open incidents from the past ROOT_CAUSE_LOOKBACK_MINUTES that:
+      - belong to this project
+      - are NOT the new incident itself
+      - have no root_cause_incident_id of their own (i.e. are root causes, not effects)
+
+    These are the candidates the LLM will reason over.
+    """
+    from app.services.storage import Incident, SessionLocal
+
+    cutoff = datetime.utcnow() - timedelta(minutes=ROOT_CAUSE_LOOKBACK_MINUTES)
+    db = SessionLocal()
+    try:
+        candidates = (
+            db.query(Incident)
+            .filter(
+                Incident.project_id == project_id,
+                Incident.id != new_incident_id,
+                Incident.status == "open",
+                Incident.first_seen >= cutoff,
+                Incident.root_cause_incident_id == None,  # noqa: E711
+            )
+            .order_by(Incident.first_seen.asc())
+            .all()
+        )
+        # Detach from session so they can be used after db.close()
+        for c in candidates:
+            db.expunge(c)
+        return candidates
+    finally:
+        db.close()
+
+
+def _apply_root_cause_chain(
+    new_incident_id: str, cause_incident_id: str, explanation: str
+):
+    """Persist the causal link onto the new incident record."""
+    from app.services.storage import Incident, SessionLocal
+
+    db = SessionLocal()
+    try:
+        incident = db.query(Incident).filter(Incident.id == new_incident_id).first()
+        if incident:
+            incident.root_cause_incident_id = cause_incident_id
+            incident.cause_explanation = explanation
+            db.commit()
+            print(
+                f"[CHAIN] Incident {new_incident_id} linked → cause: {cause_incident_id}"
+            )
+    except Exception as e:
+        print(f"[CHAIN] Failed to persist root cause link: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
 def analyze_incident(incident, project_id: str, force: bool = False):
     from app.services.storage import Analysis, Project, SessionLocal
     from app.core.runbook_matcher import match_runbook, should_escalate
@@ -90,7 +149,6 @@ def analyze_incident(incident, project_id: str, force: bool = False):
         runbook, score = match_runbook(incident)
 
         if runbook and score >= 0.5:
-            # runbook matched — no LLM call, use runbook data directly
             disposition = runbook.disposition
             if disposition == "OBSERVE" and should_escalate(incident, runbook):
                 disposition = runbook.observe_threshold.get("escalate_to", "ESCALATE")
@@ -106,7 +164,6 @@ def analyze_incident(incident, project_id: str, force: bool = False):
             matched_runbook_id = runbook.id
             runbook_match_score = score
         else:
-            # no runbook match — LLM only for unknown errors
             decision_engine = get_decision_engine()
             llm_analysis = decision_engine.analyze_incident(incident)
             if not llm_analysis:
@@ -170,6 +227,43 @@ def analyze_incident(incident, project_id: str, force: bool = False):
         db.close()
 
 
+def run_root_cause_chaining(new_incident, project_id: str):
+    """
+    After a new incident is created and analyzed, look back at recent open
+    incidents and ask the LLM whether one of them caused this one.
+
+    This runs as a best-effort step — any failure is logged and swallowed
+    so it never blocks the main processing pipeline.
+    """
+    from app.core.decision_engine import get_decision_engine
+
+    try:
+        candidates = _fetch_recent_root_cause_candidates(project_id, new_incident.id)
+        if not candidates:
+            return  # nothing to chain against
+
+        print(
+            f"[CHAIN] Checking root cause for incident {new_incident.id} "
+            f"against {len(candidates)} candidate(s)"
+        )
+
+        decision_engine = get_decision_engine()
+        result = decision_engine.chain_root_cause(new_incident, candidates)
+
+        if result and result.has_cause and result.cause_incident_id:
+            _apply_root_cause_chain(
+                new_incident_id=new_incident.id,
+                cause_incident_id=result.cause_incident_id,
+                explanation=result.cause_explanation or "",
+            )
+        else:
+            print(f"[CHAIN] No causal link found for incident {new_incident.id}")
+
+    except Exception as e:
+        # Never let chaining errors break incident processing
+        print(f"[CHAIN] run_root_cause_chaining failed for {new_incident.id}: {e}")
+
+
 def process_log_batch(payload: dict):
     from app.core.parser import ParsedLog
     from app.core.signatures import generate_signature
@@ -213,6 +307,7 @@ def process_log_batch(payload: dict):
 
             if is_new:
                 analyze_incident(incident, project_id, force=False)
+                run_root_cause_chaining(incident, project_id)
                 created += 1
             else:
                 if incident.count in {5, 10, 20}:

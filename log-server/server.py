@@ -48,14 +48,12 @@ def verify_api_key(x_api_key: str = Header(None)):
 
 
 # ---------------------------------------------------------------------------
-# Error patterns — each class/method name is DISTINCT so the signature
-# generator produces a different signature per error type, creating more
-# unique incidents instead of collapsing everything into 1.
+# Error patterns
 # ---------------------------------------------------------------------------
+
 
 class ErrorPatterns:
 
-    # --- Database errors (distinct subtypes) ---
     @staticmethod
     def db_connection_timeout():
         host = random.choice(["db-primary-1", "db-replica-2", "db-analytics-3"])
@@ -75,7 +73,6 @@ class ErrorPatterns:
         lag = random.randint(5, 60)
         return f"ReplicationLagWarning: Replica is {lag}s behind primary — read consistency degraded"
 
-    # --- Auth / Session errors ---
     @staticmethod
     def auth_token_expired():
         return f"TokenExpiredError: JWT expired at {datetime.utcnow().strftime('%H:%M:%S')} — user forced to re-login"
@@ -93,7 +90,6 @@ class ErrorPatterns:
     def session_store_unavailable():
         return f"SessionStoreError: Redis session store unreachable — falling back to stateless mode"
 
-    # --- Payment errors ---
     @staticmethod
     def payment_gateway_timeout():
         gateway = random.choice(["Stripe", "PayPal", "Braintree", "Adyen"])
@@ -101,7 +97,9 @@ class ErrorPatterns:
 
     @staticmethod
     def payment_card_declined():
-        code = random.choice(["insufficient_funds", "card_expired", "do_not_honor", "lost_card"])
+        code = random.choice(
+            ["insufficient_funds", "card_expired", "do_not_honor", "lost_card"]
+        )
         return f"CardDeclinedError: Payment declined — reason: {code}"
 
     @staticmethod
@@ -112,25 +110,33 @@ class ErrorPatterns:
     def payment_double_charge():
         return f"IdempotencyViolation: Duplicate payment request detected — second charge blocked"
 
-    # --- Service / infra errors ---
     @staticmethod
     def service_unavailable():
-        svc = random.choice([
-            "email-service", "notification-service",
-            "recommendation-engine", "search-service",
-            "analytics-pipeline", "image-processor",
-        ])
+        svc = random.choice(
+            [
+                "email-service",
+                "notification-service",
+                "recommendation-engine",
+                "search-service",
+                "analytics-pipeline",
+                "image-processor",
+            ]
+        )
         return f"ServiceUnavailableError: {svc} returned 503 after 3 retries — circuit breaker opened"
 
     @staticmethod
     def message_queue_full():
-        queue = random.choice(["email-queue", "sms-queue", "webhook-queue", "export-queue"])
+        queue = random.choice(
+            ["email-queue", "sms-queue", "webhook-queue", "export-queue"]
+        )
         depth = random.randint(10000, 99999)
         return f"QueueDepthCritical: {queue} has {depth} pending messages — consumer lag growing"
 
     @staticmethod
     def cache_stampede():
-        key = random.choice(["product-catalog", "user-permissions", "config-flags", "pricing-table"])
+        key = random.choice(
+            ["product-catalog", "user-permissions", "config-flags", "pricing-table"]
+        )
         return f"CacheStampedeDetected: Cache miss storm on key '{key}' — {random.randint(50,500)} simultaneous DB queries"
 
     @staticmethod
@@ -139,22 +145,25 @@ class ErrorPatterns:
         pct = random.randint(90, 99)
         return f"DiskSpaceCritical: {mount} is {pct}% full — write operations may fail"
 
-    # --- Application errors ---
     @staticmethod
     def null_pointer():
-        cls = random.choice([
-            "UserService.getProfile",
-            "OrderRepository.findById",
-            "PaymentController.process",
-            "CartService.checkout",
-            "NotificationService.send",
-            "ReportGenerator.build",
-        ])
+        cls = random.choice(
+            [
+                "UserService.getProfile",
+                "OrderRepository.findById",
+                "PaymentController.process",
+                "CartService.checkout",
+                "NotificationService.send",
+                "ReportGenerator.build",
+            ]
+        )
         return f"NullPointerException: Unexpected null reference in {cls}() at line {random.randint(40, 300)}"
 
     @staticmethod
     def stack_overflow():
-        cls = random.choice(["TreeParser", "RecursiveResolver", "XmlDeserializer", "GraphTraversal"])
+        cls = random.choice(
+            ["TreeParser", "RecursiveResolver", "XmlDeserializer", "GraphTraversal"]
+        )
         return f"StackOverflowError: Maximum call depth exceeded in {cls} — possible circular reference"
 
     @staticmethod
@@ -164,20 +173,25 @@ class ErrorPatterns:
 
     @staticmethod
     def unhandled_exception():
-        exc = random.choice([
-            "IndexOutOfBoundsException",
-            "ClassCastException",
-            "IllegalStateException",
-            "ConcurrentModificationException",
-            "NumberFormatException",
-        ])
+        exc = random.choice(
+            [
+                "IndexOutOfBoundsException",
+                "ClassCastException",
+                "IllegalStateException",
+                "ConcurrentModificationException",
+                "NumberFormatException",
+            ]
+        )
         return f"UnhandledException: {exc} propagated to global handler — request returned 500"
 
-    # --- Data / integration errors ---
     @staticmethod
     def data_validation_failed():
-        field = random.choice(["email", "phone_number", "postal_code", "tax_id", "iban"])
-        return f"ValidationError: Field '{field}' failed schema validation — data rejected"
+        field = random.choice(
+            ["email", "phone_number", "postal_code", "tax_id", "iban"]
+        )
+        return (
+            f"ValidationError: Field '{field}' failed schema validation — data rejected"
+        )
 
     @staticmethod
     def api_schema_mismatch():
@@ -193,7 +207,6 @@ class ErrorPatterns:
     def csv_parse_error():
         return f"CSVParseError: Malformed row at line {random.randint(100,9999)} — unexpected column count"
 
-    # --- Security ---
     @staticmethod
     def sql_injection_attempt():
         return f"SecurityAlert: SQL injection pattern detected in request — query blocked and IP flagged"
@@ -204,13 +217,16 @@ class ErrorPatterns:
 
     @staticmethod
     def brute_force_detected():
-        endpoint = random.choice(["/api/login", "/api/reset-password", "/api/verify-otp"])
+        endpoint = random.choice(
+            ["/api/login", "/api/reset-password", "/api/verify-otp"]
+        )
         return f"BruteForceDetected: {random.randint(50,500)} failed attempts on {endpoint} in 60s"
 
-        # --- Unknown / no runbook — triggers LLM analysis ---
     @staticmethod
     def kubernetes_oom_kill():
-        pod = random.choice(["api-server-7d9f", "worker-node-3b2c", "scheduler-pod-1a4e"])
+        pod = random.choice(
+            ["api-server-7d9f", "worker-node-3b2c", "scheduler-pod-1a4e"]
+        )
         return f"OOMKilled: Container {pod} exceeded memory limit and was killed by the kernel"
 
     @staticmethod
@@ -226,55 +242,65 @@ class ErrorPatterns:
     @staticmethod
     def websocket_connection_dropped():
         user_id = random.randint(10000, 99999)
-        reason = random.choice(["ping timeout", "transport close", "server namespace disconnect"])
-        return f"WebSocketError: Connection dropped for user {user_id} — reason: {reason}"
+        reason = random.choice(
+            ["ping timeout", "transport close", "server namespace disconnect"]
+        )
+        return (
+            f"WebSocketError: Connection dropped for user {user_id} — reason: {reason}"
+        )
 
     @staticmethod
     def feature_flag_service_timeout():
-        flag = random.choice(["checkout-v2", "new-pricing-engine", "dark-mode-rollout", "ab-test-homepage"])
+        flag = random.choice(
+            [
+                "checkout-v2",
+                "new-pricing-engine",
+                "dark-mode-rollout",
+                "ab-test-homepage",
+            ]
+        )
         return f"FeatureFlagTimeout: Failed to evaluate flag '{flag}' — defaulting to off, service unreachable"
 
     @staticmethod
     def cdn_origin_pull_failed():
-        asset = random.choice(["/static/js/main.chunk.js", "/static/css/app.css", "/images/hero-banner.webp"])
+        asset = random.choice(
+            [
+                "/static/js/main.chunk.js",
+                "/static/css/app.css",
+                "/images/hero-banner.webp",
+            ]
+        )
         return f"CDNOriginError: Origin pull failed for {asset} — 502 from origin, serving stale cache"
 
+
 ERROR_GENERATORS = [
-    # database
     ErrorPatterns.db_connection_timeout,
     ErrorPatterns.db_deadlock,
     ErrorPatterns.db_pool_exhausted,
     ErrorPatterns.db_replication_lag,
-    # auth
     ErrorPatterns.auth_token_expired,
     ErrorPatterns.auth_invalid_signature,
     ErrorPatterns.auth_rate_limited,
     ErrorPatterns.session_store_unavailable,
-    # payment
     ErrorPatterns.payment_gateway_timeout,
     ErrorPatterns.payment_card_declined,
     ErrorPatterns.payment_fraud_detected,
     ErrorPatterns.payment_double_charge,
-    # infra
     ErrorPatterns.service_unavailable,
     ErrorPatterns.message_queue_full,
     ErrorPatterns.cache_stampede,
     ErrorPatterns.disk_space_critical,
-    # app
     ErrorPatterns.null_pointer,
     ErrorPatterns.stack_overflow,
     ErrorPatterns.out_of_memory,
     ErrorPatterns.unhandled_exception,
-    # data
     ErrorPatterns.data_validation_failed,
     ErrorPatterns.api_schema_mismatch,
     ErrorPatterns.file_upload_failed,
     ErrorPatterns.csv_parse_error,
-    # security
     ErrorPatterns.sql_injection_attempt,
     ErrorPatterns.xss_attempt,
     ErrorPatterns.brute_force_detected,
-    
     ErrorPatterns.kubernetes_oom_kill,
     ErrorPatterns.grpc_deadline_exceeded,
     ErrorPatterns.elasticsearch_shard_failure,
@@ -283,9 +309,98 @@ ERROR_GENERATORS = [
     ErrorPatterns.cdn_origin_pull_failed,
 ]
 
-# high rates for demo — lots of visible incidents quickly
 ERROR_RATE = 0.20
 SLOW_REQUEST_RATE = 0.10
+
+
+# ---------------------------------------------------------------------------
+# Scenario definitions
+# Each step: {"delay_seconds": N, "log": "...error message..."}
+# Delays are relative to the previous step (not absolute).
+# ---------------------------------------------------------------------------
+
+SCENARIOS = {
+    # Classic DB pool exhaustion cascade:
+    #   pool exhausted → payment gateway times out (can't acquire connection)
+    #   → PaymentController throws NullPointerException on failed response
+    #   → order service marks transaction as failed with an unhandled exception
+    "db_cascade": [
+        {
+            "delay_seconds": 0,
+            "log": "ERROR: ConnectionPoolExhaustedError: All 20 connections in use — request queued for >30s",
+        },
+        {
+            "delay_seconds": 30,
+            "log": "ERROR: PaymentGatewayTimeout: Stripe did not respond within 10s — no DB connection available to log transaction",
+        },
+        {
+            "delay_seconds": 45,
+            "log": "ERROR: NullPointerException: Unexpected null reference in PaymentController.process() at line 187 — response object was null after gateway timeout",
+        },
+        {
+            "delay_seconds": 30,
+            "log": "ERROR: UnhandledException: IllegalStateException propagated to global handler — order marked failed, request returned 500",
+        },
+    ],
+    # Auth store failure cascade:
+    #   session store unreachable → token validation throws invalid signature
+    #   → rate limiter can't store state, misreads requests as brute force
+    "payment_cascade": [
+        {
+            "delay_seconds": 0,
+            "log": "ERROR: SessionStoreError: Redis session store unreachable — falling back to stateless mode",
+        },
+        {
+            "delay_seconds": 40,
+            "log": "ERROR: InvalidSignatureError: JWT signature verification failed — session store unavailable, token cannot be re-validated",
+        },
+        {
+            "delay_seconds": 35,
+            "log": "ERROR: RateLimitExceeded: Too many login attempts from 192.168.1.47 — rate limiter state lost, replaying from zero",
+        },
+    ],
+}
+
+
+async def _push_log_batch(logs: list[str]):
+    """Push a list of raw log strings to the Redis stream as a single batch."""
+    r = await get_redis()
+    await r.xadd(
+        STREAM_KEY,
+        {
+            "api_key": API_KEY or "",
+            "source": "log-server",
+            "environment": "prod",
+            "logs": json.dumps(logs),
+        },
+        maxlen=STREAM_MAXLEN,
+        approximate=True,
+    )
+
+
+async def _run_scenario(scenario_name: str):
+    """
+    Fire a hardcoded correlated error sequence with controlled timing.
+    Each step is pushed as its own batch so the worker sees them as
+    separate stream entries, giving the clustering window time to assign
+    them to different incidents.
+    """
+    steps = SCENARIOS[scenario_name]
+    print(f"[SCENARIO] Starting '{scenario_name}' — {len(steps)} steps")
+    for i, step in enumerate(steps):
+        delay = step["delay_seconds"]
+        if delay > 0:
+            print(f"[SCENARIO] Step {i+1}/{len(steps)} — waiting {delay}s")
+            await asyncio.sleep(delay)
+        log_line = f"[{datetime.utcnow().isoformat()}] ERROR: {step['log']}"
+        await _push_log_batch([log_line])
+        print(f"[SCENARIO] Step {i+1}/{len(steps)} pushed: {log_line[:80]}…")
+    print(f"[SCENARIO] '{scenario_name}' complete")
+
+
+# ---------------------------------------------------------------------------
+# Logger / generator (unchanged from original)
+# ---------------------------------------------------------------------------
 
 
 class CustomFormatter(logging.Formatter):
@@ -349,7 +464,6 @@ class LogGenerator:
             if not self.running:
                 return False, "Not running"
             self._stop_event.set()
-        # wait up to 5s for the task to exit cleanly, then cancel
         try:
             await asyncio.wait_for(asyncio.shield(self._task), timeout=5.0)
         except (asyncio.TimeoutError, asyncio.CancelledError):
@@ -367,13 +481,11 @@ class LogGenerator:
                 self._generate_log()
                 if self.log_buffer:
                     await self._push_to_stream()
-                # sleep 3s but wake immediately if stop_event fires
                 try:
                     await asyncio.wait_for(self._stop_event.wait(), timeout=3.0)
                 except asyncio.TimeoutError:
                     pass
 
-            # flush remaining buffer on clean exit
             if self.log_buffer and not self._stop_event.is_set():
                 await self._push_to_stream()
 
@@ -388,7 +500,9 @@ class LogGenerator:
         elif random.random() < SLOW_REQUEST_RATE:
             svc = random.choice(["checkout", "search", "auth", "upload", "report"])
             delay = random.uniform(2, 8)
-            self.logger.warning(f"SlowRequestWarning: {svc} endpoint took {delay:.2f}s — SLA breach")
+            self.logger.warning(
+                f"SlowRequestWarning: {svc} endpoint took {delay:.2f}s — SLA breach"
+            )
         else:
             endpoints = [
                 "GET /api/users/{} 200 12ms",
@@ -397,7 +511,9 @@ class LogGenerator:
                 "PUT /api/cart/{} 200 23ms",
                 "GET /health 200 1ms",
             ]
-            self.logger.info(random.choice(endpoints).format(random.randint(1000, 9999)))
+            self.logger.info(
+                random.choice(endpoints).format(random.randint(1000, 9999))
+            )
 
     async def _push_to_stream(self):
         if not self.log_buffer:
@@ -447,11 +563,19 @@ async def startup_event():
         print(f"[LOG-SERVER] WARNING: Redis not reachable on startup: {e}")
 
 
+# ---------------------------------------------------------------------------
+# Existing endpoints (unchanged)
+# ---------------------------------------------------------------------------
+
+
 @app.post("/api/start", dependencies=[Depends(verify_api_key)])
 async def start_generation():
     ok, msg = await log_generator.start(duration=300)
-    status = "running" if ok else "running"  # already running is still running
-    return {"message": msg, "status": log_generator.running and "running" or "idle", "stream": STREAM_KEY}
+    return {
+        "message": msg,
+        "status": log_generator.running and "running" or "idle",
+        "stream": STREAM_KEY,
+    }
 
 
 @app.post("/api/stop", dependencies=[Depends(verify_api_key)])
@@ -468,6 +592,66 @@ async def get_status():
         "last_push_at": log_generator.last_push_at,
         "last_error": log_generator.last_error,
         "stream": STREAM_KEY,
+    }
+
+
+# ---------------------------------------------------------------------------
+# NEW: /api/scenario — fire a correlated error sequence
+# ---------------------------------------------------------------------------
+
+
+@app.post("/api/scenario/{scenario_name}", dependencies=[Depends(verify_api_key)])
+async def run_scenario(scenario_name: str):
+    """
+    Fire a hardcoded correlated error sequence to test root cause chaining.
+
+    Available scenarios:
+    - db_cascade      — DB pool exhaustion → payment timeout → NullPointerException → UnhandledException
+    - payment_cascade — Session store failure → JWT invalid signature → rate limit false positive
+
+    The sequence runs in the background so this endpoint returns immediately.
+    Check the dashboard — incidents should appear linked by root_cause_incident_id.
+
+    Example:
+        curl -X POST https://<log-server>/api/scenario/db_cascade \\
+             -H "X-Api-Key: <your-api-key>"
+    """
+    if scenario_name not in SCENARIOS:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Unknown scenario '{scenario_name}'. Available: {list(SCENARIOS.keys())}",
+        )
+
+    # Fire and forget — runs in background, total duration ~2 min for db_cascade
+    asyncio.create_task(_run_scenario(scenario_name))
+
+    steps = SCENARIOS[scenario_name]
+    total_delay = sum(s["delay_seconds"] for s in steps)
+    return {
+        "scenario": scenario_name,
+        "status": "started",
+        "steps": len(steps),
+        "estimated_duration_seconds": total_delay,
+        "message": (
+            f"Scenario '{scenario_name}' is running in the background. "
+            f"{len(steps)} log entries will be pushed over ~{total_delay}s. "
+            "Watch the dashboard for linked incidents."
+        ),
+    }
+
+
+@app.get("/api/scenario", dependencies=[Depends(verify_api_key)])
+async def list_scenarios():
+    """List all available test scenarios."""
+    return {
+        "scenarios": {
+            name: {
+                "steps": len(steps),
+                "estimated_duration_seconds": sum(s["delay_seconds"] for s in steps),
+                "description": steps[0]["log"][:80] + "…",
+            }
+            for name, steps in SCENARIOS.items()
+        }
     }
 
 
@@ -495,4 +679,5 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=5001)
