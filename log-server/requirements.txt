@@ -3,4 +3,4 @@ requests==2.31.0
 python-multipart==0.0.22
 uvicorn[standard]==0.27.0
 python-dotenv==1.0.0
-redis==5.0.1
+httpx

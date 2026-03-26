@@ -1,26 +1,31 @@
-from fastapi import FastAPI, Header, HTTPException, Depends
-from fastapi.middleware.cors import CORSMiddleware
 import asyncio
-import random
+import base64
+import json
 import logging
 import os
-import json
-from datetime import datetime
+import random
+import time
 from collections import deque
+from datetime import datetime, UTC
+
+import httpx
 from dotenv import load_dotenv
-import redis.asyncio as aioredis
+from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
-app = FastAPI(title="Log Server")
-
 API_KEY = os.getenv("LOGSHIPPER_API_KEY")
-REDIS_URL = os.getenv("REDIS_URL")
-STREAM_KEY = os.getenv("STREAM_KEY", "logs:stream")
-STREAM_MAXLEN = 10_000
+LOKI_URL = os.getenv("LOKI_URL", "")
+LOKI_USERNAME = os.getenv("LOKI_USERNAME", "")
+LOKI_API_KEY = os.getenv("LOKI_API_KEY", "")
+SERVICE_NAME = os.getenv("LOG_SERVICE_NAME", "log-server")
+print(LOKI_API_KEY)
 
 cors_origins = os.getenv("CORS_ORIGINS", "")
 origins = [o.strip() for o in cors_origins.split(",") if o.strip()]
+
+app = FastAPI(title="Log Server")
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,26 +35,59 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-_redis_client = None
-
-
-async def get_redis() -> aioredis.Redis:
-    global _redis_client
-    if _redis_client is None:
-        if not REDIS_URL:
-            raise RuntimeError("REDIS_URL environment variable not set")
-        _redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
-    return _redis_client
-
 
 def verify_api_key(x_api_key: str = Header(None)):
     if x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
-# ---------------------------------------------------------------------------
-# Error patterns
-# ---------------------------------------------------------------------------
+def _loki_auth_header() -> str:
+    """Basic auth header for Grafana Cloud Loki."""
+    token = base64.b64encode(f"{LOKI_USERNAME}:{LOKI_API_KEY}".encode()).decode()
+    return f"Basic {token}"
+
+
+async def push_to_loki(lines: list[str], extra_labels: dict | None = None) -> bool:
+    """
+    Push a list of log lines to Loki in a single HTTP request
+    """
+    if not LOKI_URL or not LOKI_USERNAME or not LOKI_API_KEY:
+        print("[LOKI] Credentials not set — dropping logs")
+        return False
+
+    labels = {"service": SERVICE_NAME, "env": "prod"}
+    if extra_labels:
+        labels.update(extra_labels)
+
+    now_ns = str(int(time.time() * 1_000_000_000))
+    values = [[now_ns, line] for line in lines]
+
+    payload = {
+        "streams": [
+            {
+                "stream": labels,
+                "values": values,
+            }
+        ]
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.post(
+                f"{LOKI_URL}/loki/api/v1/push",
+                headers={
+                    "Authorization": _loki_auth_header(),
+                    "Content-Type": "application/json",
+                },
+                content=json.dumps(payload),
+            )
+            if response.status_code == 204:
+                return True
+            print(f"[LOKI] Push failed: {response.status_code} — {response.text}")
+            return False
+    except Exception as e:
+        print(f"[LOKI] Push exception: {e}")
+        return False
 
 
 class ErrorPatterns:
@@ -66,7 +104,7 @@ class ErrorPatterns:
 
     @staticmethod
     def db_pool_exhausted():
-        return f"ConnectionPoolExhaustedError: All {random.choice([10,20,50])} connections in use — request queued"
+        return f"ConnectionPoolExhaustedError: All {random.choice([10, 20, 50])} connections in use — request queued"
 
     @staticmethod
     def db_replication_lag():
@@ -75,20 +113,20 @@ class ErrorPatterns:
 
     @staticmethod
     def auth_token_expired():
-        return f"TokenExpiredError: JWT expired at {datetime.utcnow().strftime('%H:%M:%S')} — user forced to re-login"
+        return f"TokenExpiredError: JWT expired at {datetime.now(UTC).strftime('%H:%M:%S')} — user forced to re-login"
 
     @staticmethod
     def auth_invalid_signature():
-        return f"InvalidSignatureError: JWT signature verification failed — possible token tampering detected"
+        return "InvalidSignatureError: JWT signature verification failed — possible token tampering detected"
 
     @staticmethod
     def auth_rate_limited():
-        ip = f"192.168.{random.randint(1,254)}.{random.randint(1,254)}"
+        ip = f"192.168.{random.randint(1, 254)}.{random.randint(1, 254)}"
         return f"RateLimitExceeded: Too many login attempts from {ip} — blocked for 15 minutes"
 
     @staticmethod
     def session_store_unavailable():
-        return f"SessionStoreError: Redis session store unreachable — falling back to stateless mode"
+        return "SessionStoreError: Redis session store unreachable — falling back to stateless mode"
 
     @staticmethod
     def payment_gateway_timeout():
@@ -104,11 +142,11 @@ class ErrorPatterns:
 
     @staticmethod
     def payment_fraud_detected():
-        return f"FraudDetectionAlert: Transaction flagged by risk engine — score exceeded threshold"
+        return "FraudDetectionAlert: Transaction flagged by risk engine — score exceeded threshold"
 
     @staticmethod
     def payment_double_charge():
-        return f"IdempotencyViolation: Duplicate payment request detected — second charge blocked"
+        return "IdempotencyViolation: Duplicate payment request detected — second charge blocked"
 
     @staticmethod
     def service_unavailable():
@@ -137,7 +175,7 @@ class ErrorPatterns:
         key = random.choice(
             ["product-catalog", "user-permissions", "config-flags", "pricing-table"]
         )
-        return f"CacheStampedeDetected: Cache miss storm on key '{key}' — {random.randint(50,500)} simultaneous DB queries"
+        return f"CacheStampedeDetected: Cache miss storm on key '{key}' — {random.randint(50, 500)} simultaneous DB queries"
 
     @staticmethod
     def disk_space_critical():
@@ -205,22 +243,22 @@ class ErrorPatterns:
 
     @staticmethod
     def csv_parse_error():
-        return f"CSVParseError: Malformed row at line {random.randint(100,9999)} — unexpected column count"
+        return f"CSVParseError: Malformed row at line {random.randint(100, 9999)} — unexpected column count"
 
     @staticmethod
     def sql_injection_attempt():
-        return f"SecurityAlert: SQL injection pattern detected in request — query blocked and IP flagged"
+        return "SecurityAlert: SQL injection pattern detected in request — query blocked and IP flagged"
 
     @staticmethod
     def xss_attempt():
-        return f"SecurityAlert: XSS payload detected in user input — sanitization applied, incident logged"
+        return "SecurityAlert: XSS payload detected in user input — sanitization applied, incident logged"
 
     @staticmethod
     def brute_force_detected():
         endpoint = random.choice(
             ["/api/login", "/api/reset-password", "/api/verify-otp"]
         )
-        return f"BruteForceDetected: {random.randint(50,500)} failed attempts on {endpoint} in 60s"
+        return f"BruteForceDetected: {random.randint(50, 500)} failed attempts on {endpoint} in 60s"
 
     @staticmethod
     def kubernetes_oom_kill():
@@ -313,94 +351,139 @@ ERROR_RATE = 0.20
 SLOW_REQUEST_RATE = 0.10
 
 
-# ---------------------------------------------------------------------------
-# Scenario definitions
-# Each step: {"delay_seconds": N, "log": "...error message..."}
-# Delays are relative to the previous step (not absolute).
-# ---------------------------------------------------------------------------
-
 SCENARIOS = {
-    # Classic DB pool exhaustion cascade:
-    #   pool exhausted → payment gateway times out (can't acquire connection)
-    #   → PaymentController throws NullPointerException on failed response
-    #   → order service marks transaction as failed with an unhandled exception
-    "db_cascade": [
-        {
-            "delay_seconds": 0,
-            "log": "ERROR: ConnectionPoolExhaustedError: All 20 connections in use — request queued for >30s",
-        },
-        {
-            "delay_seconds": 30,
-            "log": "ERROR: PaymentGatewayTimeout: Stripe did not respond within 10s — no DB connection available to log transaction",
-        },
-        {
-            "delay_seconds": 45,
-            "log": "ERROR: NullPointerException: Unexpected null reference in PaymentController.process() at line 187 — response object was null after gateway timeout",
-        },
-        {
-            "delay_seconds": 30,
-            "log": "ERROR: UnhandledException: IllegalStateException propagated to global handler — order marked failed, request returned 500",
-        },
-    ],
-    # Auth store failure cascade:
-    #   session store unreachable → token validation throws invalid signature
-    #   → rate limiter can't store state, misreads requests as brute force
-    "payment_cascade": [
-        {
-            "delay_seconds": 0,
-            "log": "ERROR: SessionStoreError: Redis session store unreachable — falling back to stateless mode",
-        },
-        {
-            "delay_seconds": 40,
-            "log": "ERROR: InvalidSignatureError: JWT signature verification failed — session store unavailable, token cannot be re-validated",
-        },
-        {
-            "delay_seconds": 35,
-            "log": "ERROR: RateLimitExceeded: Too many login attempts from 192.168.1.47 — rate limiter state lost, replaying from zero",
-        },
-    ],
+    "db_cascade": {
+        "description": "DB pool exhaustion → payment timeout → NullPointerException → UnhandledException",
+        "steps": [
+            {
+                "delay_seconds": 0,
+                "level": "ERROR",
+                "log": "ConnectionPoolExhaustedError: All 20 connections in use — request queued for >30s",
+            },
+            {
+                "delay_seconds": 30,
+                "level": "ERROR",
+                "log": "PaymentGatewayTimeout: Stripe did not respond within 10s — no DB connection available to log transaction",
+            },
+            {
+                "delay_seconds": 45,
+                "level": "ERROR",
+                "log": "NullPointerException: Unexpected null reference in PaymentController.process() at line 187 — response object was null after gateway timeout",
+            },
+            {
+                "delay_seconds": 30,
+                "level": "ERROR",
+                "log": "UnhandledException: IllegalStateException propagated to global handler — order marked failed, request returned 500",
+            },
+        ],
+    },
+    "auth_cascade": {
+        "description": "Session store failure → JWT invalid signature → rate limiter false positive",
+        "steps": [
+            {
+                "delay_seconds": 0,
+                "level": "ERROR",
+                "log": "SessionStoreError: Redis session store unreachable — falling back to stateless mode",
+            },
+            {
+                "delay_seconds": 40,
+                "level": "ERROR",
+                "log": "InvalidSignatureError: JWT signature verification failed — session store unavailable, token cannot be re-validated",
+            },
+            {
+                "delay_seconds": 35,
+                "level": "ERROR",
+                "log": "RateLimitExceeded: Too many login attempts from 192.168.1.47 — rate limiter state lost, replaying from zero",
+            },
+        ],
+    },
+    "deployment_gone_wrong": {
+        "description": "Simulates a bad deployment: config change causes memory pressure then OOM",
+        "steps": [
+            {
+                "delay_seconds": 0,
+                "level": "INFO",
+                "log": "DeploymentStarted: Releasing v2.3.1 — connection pool size changed from 20 to 10",
+            },
+            {
+                "delay_seconds": 20,
+                "level": "WARN",
+                "log": "ConnectionPoolExhaustedError: All 10 connections in use — request queued (pool was recently halved)",
+            },
+            {
+                "delay_seconds": 30,
+                "level": "ERROR",
+                "log": "ConnectionPoolExhaustedError: All 10 connections in use — pool exhausted, requests failing",
+            },
+            {
+                "delay_seconds": 20,
+                "level": "ERROR",
+                "log": "PaymentGatewayTimeout: Stripe did not respond within 10s — DB unavailable",
+            },
+            {
+                "delay_seconds": 15,
+                "level": "ERROR",
+                "log": "OutOfMemoryError: Java heap space exhausted (2041MB/2048MB) — GC overhead limit exceeded",
+            },
+        ],
+    },
+    "memory_leak": {
+        "description": "Gradual memory leak cycle — heap grows until OOM kill, then restarts",
+        "steps": [
+            {
+                "delay_seconds": 0,
+                "level": "WARN",
+                "log": "MemoryPressureWarning: Heap at 71% — GC frequency increasing",
+            },
+            {
+                "delay_seconds": 60,
+                "level": "WARN",
+                "log": "MemoryPressureWarning: Heap at 83% — GC pause times exceeding 500ms",
+            },
+            {
+                "delay_seconds": 60,
+                "level": "ERROR",
+                "log": "MemoryPressureWarning: Heap at 94% — GC overhead critical, response times degraded",
+            },
+            {
+                "delay_seconds": 60,
+                "level": "ERROR",
+                "log": "OOMKilled: Container api-server-7d9f exceeded memory limit and was killed by the kernel",
+            },
+            {
+                "delay_seconds": 5,
+                "level": "INFO",
+                "log": "ServiceRestarted: api-server-7d9f restarted by orchestrator — heap reset to 0%",
+            },
+        ],
+    },
 }
 
 
-async def _push_log_batch(logs: list[str]):
-    """Push a list of raw log strings to the Redis stream as a single batch."""
-    r = await get_redis()
-    await r.xadd(
-        STREAM_KEY,
-        {
-            "api_key": API_KEY or "",
-            "source": "log-server",
-            "environment": "prod",
-            "logs": json.dumps(logs),
-        },
-        maxlen=STREAM_MAXLEN,
-        approximate=True,
-    )
-
-
 async def _run_scenario(scenario_name: str):
-    """
-    Fire a hardcoded correlated error sequence with controlled timing.
-    Each step is pushed as its own batch so the worker sees them as
-    separate stream entries, giving the clustering window time to assign
-    them to different incidents.
-    """
-    steps = SCENARIOS[scenario_name]
+    """Execute a scenario — push each step to Loki with controlled timing."""
+    scenario = SCENARIOS[scenario_name]
+    steps = scenario["steps"]
     print(f"[SCENARIO] Starting '{scenario_name}' — {len(steps)} steps")
+
     for i, step in enumerate(steps):
         delay = step["delay_seconds"]
         if delay > 0:
             print(f"[SCENARIO] Step {i+1}/{len(steps)} — waiting {delay}s")
             await asyncio.sleep(delay)
-        log_line = f"[{datetime.utcnow().isoformat()}] ERROR: {step['log']}"
-        await _push_log_batch([log_line])
-        print(f"[SCENARIO] Step {i+1}/{len(steps)} pushed: {log_line[:80]}…")
+
+        ts = datetime.now(UTC).isoformat()
+        level = step.get("level", "ERROR")
+        log_line = f"[{ts}] {level}: {step['log']}"
+
+        success = await push_to_loki(
+            [log_line],
+            extra_labels={"scenario": scenario_name, "step": str(i + 1)},
+        )
+        status = "pushed" if success else "FAILED"
+        print(f"[SCENARIO] Step {i+1}/{len(steps)} {status}: {log_line[:80]}…")
+
     print(f"[SCENARIO] '{scenario_name}' complete")
-
-
-# ---------------------------------------------------------------------------
-# Logger / generator (unchanged from original)
-# ---------------------------------------------------------------------------
 
 
 class CustomFormatter(logging.Formatter):
@@ -424,7 +507,7 @@ class LogGenerator:
         self._stop_event = asyncio.Event()
         self._lock = asyncio.Lock()
         self._task: asyncio.Task | None = None
-        self.log_buffer = deque(maxlen=20)
+        self.log_buffer = deque(maxlen=50)
         self.stats = {
             "logs_generated": 0,
             "logs_shipped": 0,
@@ -448,7 +531,7 @@ class LogGenerator:
     def running(self) -> bool:
         return self._task is not None and not self._task.done()
 
-    async def start(self, duration=300):
+    async def start(self, duration: int = 300):
         async with self._lock:
             if self.running:
                 return False, "Already running"
@@ -456,7 +539,7 @@ class LogGenerator:
             self.stats = {k: 0 for k in self.stats}
             self.last_error = None
             self._task = asyncio.create_task(self._run(duration))
-            print(f"[LOG-SERVER] Started — {duration}s → '{STREAM_KEY}'")
+            print(f"[LOG-SERVER] Started — {duration}s → Loki")
             return True, "started"
 
     async def stop(self):
@@ -471,7 +554,7 @@ class LogGenerator:
         print("[LOG-SERVER] Stopped")
         return True, "stopped"
 
-    async def _run(self, duration=300):
+    async def _run(self, duration: int = 300):
         print(f"[LOG-SERVER] Running for {duration}s")
         start_time = asyncio.get_event_loop().time()
         try:
@@ -480,14 +563,14 @@ class LogGenerator:
                     break
                 self._generate_log()
                 if self.log_buffer:
-                    await self._push_to_stream()
+                    await self._flush_to_loki()
                 try:
                     await asyncio.wait_for(self._stop_event.wait(), timeout=3.0)
                 except asyncio.TimeoutError:
                     pass
 
-            if self.log_buffer and not self._stop_event.is_set():
-                await self._push_to_stream()
+            if self.log_buffer:
+                await self._flush_to_loki()
 
             print(f"[LOG-SERVER] Finished. Stats: {self.stats}")
         except asyncio.CancelledError:
@@ -495,9 +578,10 @@ class LogGenerator:
 
     def _generate_log(self):
         self.stats["logs_generated"] += 1
-        if random.random() < ERROR_RATE:
+        rand = random.random()
+        if rand < ERROR_RATE:
             self.logger.error(random.choice(ERROR_GENERATORS)())
-        elif random.random() < SLOW_REQUEST_RATE:
+        elif rand < ERROR_RATE + SLOW_REQUEST_RATE:
             svc = random.choice(["checkout", "search", "auth", "upload", "report"])
             delay = random.uniform(2, 8)
             self.logger.warning(
@@ -515,73 +599,66 @@ class LogGenerator:
                 random.choice(endpoints).format(random.randint(1000, 9999))
             )
 
-    async def _push_to_stream(self):
+    async def _flush_to_loki(self):
         if not self.log_buffer:
             return
 
         logs = list(self.log_buffer)
         self.log_buffer.clear()
 
-        try:
-            r = await get_redis()
-            await r.xadd(
-                STREAM_KEY,
-                {
-                    "api_key": API_KEY or "",
-                    "source": "log-server",
-                    "environment": "prod",
-                    "logs": json.dumps(logs),
-                },
-                maxlen=STREAM_MAXLEN,
-                approximate=True,
-            )
+        success = await push_to_loki(logs)
+        if success:
             self.stats["logs_shipped"] += len(logs)
             self.stats["batches_pushed"] += 1
-            self.last_push_at = datetime.utcnow().isoformat()
-            print(f"[LOG-SERVER] Pushed {len(logs)} logs to stream")
-
-        except Exception as e:
-            err = str(e)
-            print(f"[LOG-SERVER] Stream push failed: {err}")
-            self.last_error = err
+            self.last_push_at = datetime.now(UTC).isoformat()
+            print(f"[LOG-SERVER] Pushed {len(logs)} logs to Loki")
+        else:
             self.stats["push_errors"] += 1
+            self.last_error = "Loki push failed"
             self.log_buffer.extendleft(reversed(logs))
 
 
-log_generator = None
+log_generator: LogGenerator | None = None
 
 
 @app.on_event("startup")
 async def startup_event():
     global log_generator
     log_generator = LogGenerator()
-    try:
-        r = await get_redis()
-        await r.ping()
-        print(f"[LOG-SERVER] Redis connected. Stream key: '{STREAM_KEY}'")
-    except Exception as e:
-        print(f"[LOG-SERVER] WARNING: Redis not reachable on startup: {e}")
 
-
-# ---------------------------------------------------------------------------
-# Existing endpoints (unchanged)
-# ---------------------------------------------------------------------------
+    if not all([LOKI_URL, LOKI_USERNAME, LOKI_API_KEY]):
+        print(
+            "[LOG-SERVER] WARNING: LOKI_URL / LOKI_USERNAME / LOKI_API_KEY not fully set"
+        )
+    else:
+        ok = await push_to_loki(["[startup] Log server connected to Loki"])
+        if ok:
+            print(f"[LOG-SERVER] Loki connected at {LOKI_URL}")
+        else:
+            print(
+                "[LOG-SERVER] WARNING: Loki connection test failed — check credentials"
+            )
 
 
 @app.post("/api/start", dependencies=[Depends(verify_api_key)])
-async def start_generation():
-    ok, msg = await log_generator.start(duration=300)
+async def start_generation(duration: int = 300):
+    ok, msg = await log_generator.start(duration=duration)
     return {
         "message": msg,
-        "status": log_generator.running and "running" or "idle",
-        "stream": STREAM_KEY,
+        "status": "running" if log_generator.running else "idle",
+        "transport": "loki",
+        "duration_seconds": duration,
     }
 
 
 @app.post("/api/stop", dependencies=[Depends(verify_api_key)])
 async def stop_generation():
     ok, msg = await log_generator.stop()
-    return {"message": msg, "stats": log_generator.stats, "status": "idle"}
+    return {
+        "message": msg,
+        "stats": log_generator.stats,
+        "status": "idle",
+    }
 
 
 @app.get("/api/status", dependencies=[Depends(verify_api_key)])
@@ -591,30 +668,15 @@ async def get_status():
         "stats": log_generator.stats,
         "last_push_at": log_generator.last_push_at,
         "last_error": log_generator.last_error,
-        "stream": STREAM_KEY,
+        "transport": "loki",
+        "loki_url": LOKI_URL,
     }
-
-
-# ---------------------------------------------------------------------------
-# NEW: /api/scenario — fire a correlated error sequence
-# ---------------------------------------------------------------------------
 
 
 @app.post("/api/scenario/{scenario_name}", dependencies=[Depends(verify_api_key)])
 async def run_scenario(scenario_name: str):
     """
-    Fire a hardcoded correlated error sequence to test root cause chaining.
-
-    Available scenarios:
-    - db_cascade      — DB pool exhaustion → payment timeout → NullPointerException → UnhandledException
-    - payment_cascade — Session store failure → JWT invalid signature → rate limit false positive
-
-    The sequence runs in the background so this endpoint returns immediately.
-    Check the dashboard — incidents should appear linked by root_cause_incident_id.
-
-    Example:
-        curl -X POST https://<log-server>/api/scenario/db_cascade \\
-             -H "X-Api-Key: <your-api-key>"
+    Fire a correlated error scenario against Loki.
     """
     if scenario_name not in SCENARIOS:
         raise HTTPException(
@@ -622,20 +684,20 @@ async def run_scenario(scenario_name: str):
             detail=f"Unknown scenario '{scenario_name}'. Available: {list(SCENARIOS.keys())}",
         )
 
-    # Fire and forget — runs in background, total duration ~2 min for db_cascade
     asyncio.create_task(_run_scenario(scenario_name))
 
-    steps = SCENARIOS[scenario_name]
+    scenario = SCENARIOS[scenario_name]
+    steps = scenario["steps"]
     total_delay = sum(s["delay_seconds"] for s in steps)
     return {
         "scenario": scenario_name,
+        "description": scenario["description"],
         "status": "started",
         "steps": len(steps),
         "estimated_duration_seconds": total_delay,
         "message": (
             f"Scenario '{scenario_name}' is running in the background. "
-            f"{len(steps)} log entries will be pushed over ~{total_delay}s. "
-            "Watch the dashboard for linked incidents."
+            f"{len(steps)} log entries will be pushed to Loki over ~{total_delay}s."
         ),
     }
 
@@ -646,25 +708,24 @@ async def list_scenarios():
     return {
         "scenarios": {
             name: {
-                "steps": len(steps),
-                "estimated_duration_seconds": sum(s["delay_seconds"] for s in steps),
-                "description": steps[0]["log"][:80] + "…",
+                "description": scenario["description"],
+                "steps": len(scenario["steps"]),
+                "estimated_duration_seconds": sum(
+                    s["delay_seconds"] for s in scenario["steps"]
+                ),
             }
-            for name, steps in SCENARIOS.items()
+            for name, scenario in SCENARIOS.items()
         }
     }
 
 
 @app.get("/health")
 async def health():
-    redis_ok = False
-    try:
-        r = await get_redis()
-        await r.ping()
-        redis_ok = True
-    except Exception:
-        pass
-    return {"status": "healthy", "redis": "connected" if redis_ok else "disconnected"}
+    loki_ok = await push_to_loki(["[healthcheck] ping"])
+    return {
+        "status": "healthy",
+        "loki": "connected" if loki_ok else "unreachable",
+    }
 
 
 @app.get("/")
@@ -672,8 +733,9 @@ async def root():
     return {
         "service": "log-server",
         "status": "running",
-        "transport": "redis-stream",
-        "stream_key": STREAM_KEY,
+        "transport": "loki",
+        "loki_url": LOKI_URL or "not configured",
+        "scenarios": list(SCENARIOS.keys()),
     }
 
 
