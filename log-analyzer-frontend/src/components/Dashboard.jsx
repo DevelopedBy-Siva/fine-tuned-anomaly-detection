@@ -1,46 +1,51 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { incidentsAPI, authAPI } from "../services/api";
+import { useState, useEffect, useCallback } from "react";
+import { incidentsAPI, logServerAPI, authAPI } from "../services/api";
 import Navbar from "./Navbar";
 import IncidentCard from "./IncidentCard";
-import { RefreshCw, AlertTriangle } from "lucide-react";
-import { Play, Square, AlertCircle } from "lucide-react";
+import {
+  RefreshCw,
+  AlertTriangle,
+  Play,
+  Square,
+  AlertCircle,
+} from "lucide-react";
 
 function useDebounce(value, delay) {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-
+  const [debounced, setDebounced] = useState(value);
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => {
-      clearTimeout(handler);
-    };
+    const h = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(h);
   }, [value, delay]);
-
-  return debouncedValue;
+  return debounced;
 }
 
 function Dashboard() {
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isTest, setIsTest] = useState(false);
+  const [logStatus, setLogStatus] = useState("unknown");
+  const [logServerError, setLogServerError] = useState("");
   const [filters, setFilters] = useState({
     status: "open",
     severity: "",
     ticket_title: "",
   });
-  const [logServerStatus, setLogServerStatus] = useState("unknown");
-  const [showNotice, setShowNotice] = useState(true);
 
   const debouncedFilters = useDebounce(filters, 500);
 
-  const fetchIncidents = useCallback(async (filterParams) => {
+  useEffect(() => {
+    authAPI
+      .getMe()
+      .then((res) => setIsTest(res.data?.is_test ?? false))
+      .catch(() => {});
+  }, []);
+
+  const fetchIncidents = useCallback(async (f) => {
     try {
-      const response = await incidentsAPI.list(filterParams);
-      const incidentsList = response.data;
-      setIncidents(incidentsList);
-    } catch (err) {
-      console.error("Failed to fetch incidents:", err);
+      const res = await incidentsAPI.list(f);
+      setIncidents(res.data);
+    } catch (e) {
+      console.error("fetch incidents:", e);
     } finally {
       setLoading(false);
     }
@@ -50,155 +55,100 @@ function Dashboard() {
     setLoading(true);
     fetchIncidents(debouncedFilters);
   }, [debouncedFilters, fetchIncidents]);
-
   useEffect(() => {
-    const interval = setInterval(() => {
-      fetchIncidents(debouncedFilters);
-    }, 5000);
-
-    return () => clearInterval(interval);
+    const t = setInterval(() => fetchIncidents(debouncedFilters), 5000);
+    return () => clearInterval(t);
   }, [debouncedFilters, fetchIncidents]);
 
-  const handleClose = async (id) => {
-    try {
-      await incidentsAPI.close(id);
-      fetchIncidents(debouncedFilters);
-    } catch (err) {
-      console.error("Failed to close incident:", err);
-    }
-  };
-
-  const handleIgnore = async (id) => {
-    try {
-      await incidentsAPI.ignore(id);
-      fetchIncidents(debouncedFilters);
-    } catch (err) {
-      console.error("Failed to ignore incident:", err);
-    }
-  };
-
-  const stats = {
-    total: incidents.length,
-    highFrequency: incidents.filter((i) => i.count >= 5).length,
-    analyzed: incidents.filter((i) => i.analysis).length,
-  };
+  useEffect(() => {
+    if (!isTest) return;
+    let alive = true;
+    const poll = async () => {
+      try {
+        const res = await logServerAPI.status();
+        if (alive) setLogStatus(res.data?.status || "unknown");
+      } catch {
+        if (alive) setLogStatus("unknown");
+      }
+    };
+    poll();
+    const t = setInterval(poll, 5000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [isTest]);
 
   const handleStart = async () => {
+    setLogServerError("");
+    setLogStatus("unknown");
     try {
-      setLogServerStatus("unknown");
-      await authAPI.startLogServer();
-      setLogServerStatus("running");
+      await logServerAPI.start();
+      setLogStatus("running");
     } catch (err) {
-      console.error("Failed to start server:", err);
+      setLogServerError(
+        err.response?.data?.detail || "Failed to start log server.",
+      );
+      setLogStatus("idle");
     }
   };
 
   const handleStop = async () => {
+    setLogServerError("");
+    setLogStatus("unknown");
     try {
-      setLogServerStatus("unknown");
-      await authAPI.stopLogServer();
-      setLogServerStatus("idle");
-    } catch (err) {
-      console.error("Failed to stop server:", err);
+      await logServerAPI.stop();
+      setLogStatus("idle");
+    } catch {
+      setLogServerError("Failed to stop log server.");
     }
   };
 
-  useEffect(() => {
-    let alive = true;
+  const handleClose = async (id) => {
+    await incidentsAPI.close(id);
+    fetchIncidents(debouncedFilters);
+  };
+  const handleIgnore = async (id) => {
+    await incidentsAPI.ignore(id);
+    fetchIncidents(debouncedFilters);
+  };
 
-    const fetchLogServerStatus = async () => {
-      try {
-        const res = await authAPI.statusLogServer();
-        const status = res?.data?.status;
-        if (alive) setLogServerStatus(status || "unknown");
-      } catch (err) {
-        if (alive) setLogServerStatus("unknown");
-        console.error("Failed to fetch log server status:", err);
-      }
-    };
-
-    fetchLogServerStatus();
-
-    const interval = setInterval(fetchLogServerStatus, 5000);
-
-    return () => {
-      alive = false;
-      clearInterval(interval);
-    };
-  }, []);
+  const stats = {
+    total: incidents.length,
+    totalEvents: incidents.reduce((s, i) => s + i.count, 0),
+    highFreq: incidents.filter((i) => i.count >= 5).length,
+    analyzed: incidents.filter((i) => i.analysis).length,
+  };
 
   return (
     <div className="min-h-screen">
       <Navbar />
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-16">
-        {showNotice && (
-          <div className="relative mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-5">
-            <div className="flex items-start">
-              <AlertCircle
-                className="text-amber-400 mr-3 mt-0.5 shrink-0"
-                size={18}
-              />
+        <h1 className="text-3xl font-medium text-white mb-8">
+          Incident Dashboard
+        </h1>
 
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-amber-300 mb-1">
-                  Free Instance Notice
-                </p>
-
-                <p className="text-sm text-amber-200 leading-relaxed">
-                  The server runs on a free-tier instance and may shut down
-                  after periods of inactivity. Due to limited database storage,
-                  all incident records are cleared on each server startup to
-                  maintain system functionality.
-                </p>
-              </div>
-
-              <button
-                onClick={() => setShowNotice(false)}
-                className="ml-4 text-amber-300 hover:text-white transition-colors"
-              >
-                ✕
-              </button>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+          {[
+            { label: "Active Incidents", value: stats.total },
+            { label: "Total Events", value: stats.totalEvents },
+            { label: "High Frequency", value: stats.highFreq },
+            { label: "Analyzed", value: stats.analyzed },
+          ].map(({ label, value }) => (
+            <div
+              key={label}
+              className="rounded-lg border border-gray-800 py-6 px-5"
+            >
+              <div className="text-3xl font-semibold text-white">{value}</div>
+              <div className="text-xs text-gray-500 mt-1">{label}</div>
             </div>
-          </div>
-        )}
-        <div className="mb-8">
-          <h1 className="text-3xl font-medium text-white mb-2">
-            Incident Dashboard
-          </h1>
+          ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 my-10">
-          <div className="box-bg-color rounded-lg border border-gray-800 shadow-md shadow-gray-900 py-8 px-6 min-h-[120px]">
-            <div className="text-4xl font-medium text-black">{stats.total}</div>
-            <div className="text-sm text-gray-600 mt-2">Active Incidents</div>
-          </div>
-
-          <div className="box-bg-color rounded-lg border border-gray-800 shadow-md shadow-gray-900 py-8 px-6 min-h-[120px]">
-            <div className="text-4xl font-medium text-black">
-              {incidents.reduce((sum, i) => sum + i.count, 0)}
-            </div>
-            <div className="text-sm text-gray-600 mt-2">Total Events</div>
-          </div>
-
-          <div className="box-bg-color rounded-lg border border-gray-800 shadow-md shadow-gray-900 py-8 px-6 min-h-[120px]">
-            <div className="text-4xl font-medium text-black">
-              {stats.highFrequency}
-            </div>
-            <div className="text-sm text-gray-600 mt-2">High Frequency</div>
-          </div>
-
-          <div className="box-bg-color rounded-lg border border-gray-800 shadow-md shadow-gray-900 py-8 px-6 min-h-[120px]">
-            <div className="text-4xl font-medium text-black">
-              {stats.analyzed}
-            </div>
-            <div className="text-sm text-gray-600 mt-2">Analyzed</div>
-          </div>
-        </div>
-        <div className="box-bg rounded-lg shadow p-6 mb-8">
+        <div className="rounded-lg border border-gray-800 p-5 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs text-gray-500 mb-1.5">
                 Status
               </label>
               <select
@@ -206,24 +156,24 @@ function Dashboard() {
                 onChange={(e) =>
                   setFilters({ ...filters, status: e.target.value })
                 }
-                className={`text-sm bg-transparent w-full px-4 py-2 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-gray-500`}
+                className="text-sm bg-transparent w-full px-3 py-2 border border-gray-700 rounded-lg text-gray-400 focus:ring-1 focus:ring-sky-500"
               >
-                <option value="" className="bg-black text-gray-400">
+                <option value="" className="bg-black">
                   All
                 </option>
-                <option value="open" className="bg-black text-gray-400">
+                <option value="open" className="bg-black">
                   Open
                 </option>
-                <option value="closed" className="bg-black text-gray-400">
+                <option value="closed" className="bg-black">
                   Closed
                 </option>
-                <option value="ignored" className="bg-black text-gray-400">
+                <option value="ignored" className="bg-black">
                   Ignored
                 </option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs text-gray-500 mb-1.5">
                 Severity
               </label>
               <select
@@ -231,28 +181,28 @@ function Dashboard() {
                 onChange={(e) =>
                   setFilters({ ...filters, severity: e.target.value })
                 }
-                className={`text-sm bg-transparent w-full px-4 py-2 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-gray-500`}
+                className="text-sm bg-transparent w-full px-3 py-2 border border-gray-700 rounded-lg text-gray-400 focus:ring-1 focus:ring-sky-500"
               >
-                <option value="" className="bg-black text-gray-400">
+                <option value="" className="bg-black">
                   All
                 </option>
-                <option value="critical" className="bg-black text-gray-400">
+                <option value="critical" className="bg-black">
                   Critical
                 </option>
-                <option value="high" className="bg-black text-gray-400">
+                <option value="high" className="bg-black">
                   High
                 </option>
-                <option value="medium" className="bg-black text-gray-400">
+                <option value="medium" className="bg-black">
                   Medium
                 </option>
-                <option value="low" className="bg-black text-gray-400">
+                <option value="low" className="bg-black">
                   Low
                 </option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ticket Title
+              <label className="block text-xs text-gray-500 mb-1.5">
+                Search
               </label>
               <input
                 type="text"
@@ -260,74 +210,55 @@ function Dashboard() {
                 onChange={(e) =>
                   setFilters({ ...filters, ticket_title: e.target.value })
                 }
-                placeholder="Search ticket title..."
-                className="text-sm bg-transparent w-full px-4 py-2 border border-white/10 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-500 placeholder:text-gray-500"
+                placeholder="Ticket title..."
+                className="text-sm bg-transparent w-full px-3 py-2 border border-gray-700 rounded-lg text-gray-400 placeholder:text-gray-600 focus:ring-1 focus:ring-sky-500"
               />
             </div>
-            <div className="flex items-end gap-3">
-              <button
-                disabled={
-                  logServerStatus === "unknown" || logServerStatus === "running"
-                }
-                onClick={handleStart}
-                className="
-                    text-sm flex-1 px-4 py-2
-                    bg-sky-500 text-white
-                    rounded-lg flex items-center justify-center
-                    transition-colors
-                    hover:bg-sky-600
-                    disabled:bg-gray-500
-                    disabled:opacity-60
-                    disabled:cursor-not-allowed
-                    disabled:hover:bg-gray-500
-                  "
-              >
-                <Play size={14} className="mr-2" />
-                Start
-              </button>
-              <button
-                disabled={
-                  logServerStatus === "unknown" || logServerStatus === "idle"
-                }
-                onClick={handleStop}
-                className="
-                    text-sm flex-1 px-4 py-2
-                    bg-red-500 text-white
-                    rounded-lg flex items-center justify-center
-                    transition-colors
-                    hover:bg-red-600
-                    disabled:bg-gray-500
-                    disabled:opacity-60
-                    disabled:cursor-not-allowed
-                    disabled:hover:bg-gray-500
-                  "
-              >
-                <Square size={14} className="mr-2" />
-                Stop
-              </button>
-            </div>
+
+            {isTest && (
+              <div className="flex items-end gap-2">
+                <button
+                  onClick={handleStart}
+                  disabled={logStatus === "unknown" || logStatus === "running"}
+                  className="flex-1 px-3 py-2 text-sm bg-sky-500 text-white rounded-lg flex items-center justify-center gap-1.5 hover:bg-sky-600 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Play size={13} /> Start
+                </button>
+                <button
+                  onClick={handleStop}
+                  disabled={logStatus === "unknown" || logStatus === "idle"}
+                  className="flex-1 px-3 py-2 text-sm bg-red-500 text-white rounded-lg flex items-center justify-center gap-1.5 hover:bg-red-600 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Square size={13} /> Stop
+                </button>
+              </div>
+            )}
           </div>
+
+          {isTest && logServerError && (
+            <div className="flex items-start gap-3 mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={15} />
+              <p className="text-red-300 text-xs">{logServerError}</p>
+            </div>
+          )}
         </div>
 
         {loading ? (
           <div className="text-center py-12">
-            <span className="loader"></span>
-            <p className="text-gray-600 py-4 text-sm">Loading incidents...</p>
+            <span className="loader" />
+            <p className="text-gray-500 text-sm mt-4">Loading incidents...</p>
           </div>
         ) : incidents.length === 0 ? (
-          <div className="box-bg text-center py-12 rounded-lg shadow">
-            <AlertTriangle className="text-gray-600 mx-auto mb-2" size={34} />
-            <h3 className="text-lg font-medium text-gray-600 mb-1">
-              No incidents found
-            </h3>
-            <p className="text-gray-700 text-xs">
+          <div className="text-center py-16 rounded-lg border border-gray-800">
+            <AlertTriangle className="text-gray-600 mx-auto mb-3" size={32} />
+            <p className="text-gray-500 text-sm">
               {filters.status || filters.severity || filters.ticket_title
-                ? "Try adjusting your filters"
-                : "Start generating logs to see incidents here"}
+                ? "No incidents match your filters"
+                : "No incidents yet — logs will appear here as they are detected"}
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 gap-5">
             {incidents.map((incident) => (
               <IncidentCard
                 key={incident.id}
@@ -339,9 +270,10 @@ function Dashboard() {
             ))}
           </div>
         )}
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-black/70 backdrop-blur px-4 py-4 text-center text-xs text-gray-400">
-          <RefreshCw size={14} className="inline mr-2" />
-          Auto-refreshing every 5 seconds.
+
+        <div className="fixed bottom-0 left-0 right-0 border-t border-white/5 bg-black/80 backdrop-blur px-4 py-3 text-center text-xs text-gray-600">
+          <RefreshCw size={12} className="inline mr-1.5" />
+          Auto-refreshing every 5 seconds
         </div>
       </div>
     </div>

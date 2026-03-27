@@ -2,21 +2,18 @@ import axios from "axios";
 
 export const API_BASE_URL =
   process.env.REACT_APP_API_URL || "http://localhost:8000";
+
 export const TEST_LOG_SERVER_URL =
-  process.env.REACT_APP_TEST_LOG_SERVER_URL || "http://localhost:5001";
+  process.env.REACT_APP_TEST_LOG_SERVER_URL || "http://localhost:8001";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  headers: { "Content-Type": "application/json" },
 });
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
@@ -25,16 +22,15 @@ export const authAPI = {
   login: (data) => api.post("/api/auth/login", data),
   getMe: () => api.get("/api/auth/me"),
   updateSettings: (data) => api.put("/api/auth/settings", data),
-  startLogServer: () => api.post("/api/auth/log-server/start"),
-  stopLogServer: () => api.post("/api/auth/log-server/stop"),
-  statusLogServer: () => api.get("/api/auth/log-server/status"),
+  settingsStatus: () => api.get("/api/auth/settings/status"),
+};
 
-  validateUrl: (url) => api.post("/api/auth/validate/url", { url }),
-  validateDiscordEscalate: (webhook_url) =>
-    api.post("/api/auth/validate/discord-escalate", { webhook_url }),
-  validateDiscordDev: (webhook_url) =>
-    api.post("/api/auth/validate/discord-dev", { webhook_url }),
-  validateEmail: (email) => api.post("/api/auth/validate/email", { email }),
+export const logServerAPI = {
+  start: () => api.post("/api/log-server/start"),
+  stop: () => api.post("/api/log-server/stop"),
+  status: () => api.get("/api/log-server/status"),
+  runScenario: (name) => api.post(`/api/log-server/scenario/${name}`),
+  listScenarios: () => api.get("/api/log-server/scenarios"),
 };
 
 export const incidentsAPI = {
@@ -44,9 +40,7 @@ export const incidentsAPI = {
   ignore: (id) => api.post(`/api/incidents/${id}/ignore`),
 };
 
-export const isAuthenticated = () => {
-  return !!localStorage.getItem("token");
-};
+export const isAuthenticated = () => !!localStorage.getItem("token");
 
 export const logout = () => {
   localStorage.removeItem("token");

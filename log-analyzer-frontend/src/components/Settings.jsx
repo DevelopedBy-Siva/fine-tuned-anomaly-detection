@@ -1,49 +1,184 @@
 import React, { useState, useEffect } from "react";
 import { authAPI } from "../services/api";
 import Navbar from "./Navbar";
-import { Save, AlertCircle, CheckCircle } from "lucide-react";
+import {
+  Save,
+  AlertCircle,
+  CheckCircle,
+  Eye,
+  EyeOff,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
+
+const HIDDEN_MARKER = "HIDDEN: TEST CREDENTIAL";
+
+function SectionHeader({ title, description, configured, open, onToggle }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="w-full flex items-center justify-between py-3 text-left"
+    >
+      <div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-200">{title}</span>
+          {configured ? (
+            <span className="text-xs px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full border border-green-500/30">
+              Configured
+            </span>
+          ) : (
+            <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full border border-amber-500/30">
+              Not set
+            </span>
+          )}
+        </div>
+        {description && (
+          <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+        )}
+      </div>
+      {open ? (
+        <ChevronUp size={16} className="text-gray-400" />
+      ) : (
+        <ChevronDown size={16} className="text-gray-400" />
+      )}
+    </button>
+  );
+}
+
+function SecretInput({
+  label,
+  name,
+  value,
+  onChange,
+  placeholder,
+  disabled,
+  hint,
+}) {
+  const [show, setShow] = useState(false);
+  const isHidden = value === HIDDEN_MARKER || value === "••••••";
+
+  return (
+    <div>
+      <label className="block text-xs text-gray-400 mb-1.5">{label}</label>
+      <div className="relative">
+        <input
+          type={show && !isHidden ? "text" : "password"}
+          name={name}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          disabled={disabled}
+          className="w-full px-4 py-2.5 pr-10 bg-transparent text-gray-100 border border-gray-700 rounded-lg text-sm disabled:text-gray-500 disabled:cursor-not-allowed placeholder:text-gray-600 focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+        />
+        {!disabled && (
+          <button
+            type="button"
+            onClick={() => setShow((s) => !s)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+          >
+            {show ? <EyeOff size={14} /> : <Eye size={14} />}
+          </button>
+        )}
+      </div>
+      {hint && <p className="text-xs text-gray-600 mt-1">{hint}</p>}
+    </div>
+  );
+}
+
+function PlainInput({
+  label,
+  name,
+  value,
+  onChange,
+  placeholder,
+  disabled,
+  hint,
+  type = "text",
+}) {
+  return (
+    <div>
+      <label className="block text-xs text-gray-400 mb-1.5">{label}</label>
+      <input
+        type={type}
+        name={name}
+        value={value || ""}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        className="w-full px-4 py-2.5 bg-transparent text-gray-100 border border-gray-700 rounded-lg text-sm disabled:text-gray-500 disabled:cursor-not-allowed placeholder:text-gray-600 focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+      />
+      {hint && <p className="text-xs text-gray-600 mt-1">{hint}</p>}
+    </div>
+  );
+}
 
 function Settings() {
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
-  const [project, setProject] = useState(null);
   const [isTest, setIsTest] = useState(false);
+  const [openSections, setOpenSections] = useState({
+    loki: true,
+    llm: false,
+    observability: false,
+    notifications: false,
+    security: false,
+  });
+  const [setupStatus, setSetupStatus] = useState({});
 
-  const [formData, setFormData] = useState({
-    name: "",
-    password: "",
-    log_source_url: "",
+  const [form, setForm] = useState({
+    loki_url: "",
+    loki_username: "",
+    loki_api_key: "",
+    loki_service: "",
+    groq_api_key: "",
+    langfuse_public_key: "",
+    langfuse_secret_key: "",
+    langfuse_host: "",
     user_email: "",
     discord_webhook_escalate: "",
     discord_webhook_dev: "",
+    password: "",
   });
 
   useEffect(() => {
-    const fetchProject = async () => {
+    const load = async () => {
       try {
-        const response = await authAPI.getMe();
-        const projectData = response.data;
-        setProject(projectData);
-        setFormData({
-          name: projectData.name,
+        const res = await authAPI.getMe();
+        const p = res.data;
+        setIsTest(p.is_test);
+        setSetupStatus(p.setup_status || {});
+        setForm({
+          loki_url: p.loki_url || "",
+          loki_username: p.loki_username || "",
+          loki_api_key: p.loki_api_key || "",
+          loki_service: p.loki_service || "",
+          groq_api_key: p.groq_api_key || "",
+          langfuse_public_key: p.langfuse_public_key || "",
+          langfuse_secret_key: p.langfuse_secret_key || "",
+          langfuse_host: p.langfuse_host || "https://cloud.langfuse.com",
+          user_email: p.user_email || "",
+          discord_webhook_escalate: p.discord_webhook_escalate || "",
+          discord_webhook_dev: p.discord_webhook_dev || "",
           password: "",
-          log_source_url: projectData.log_source_url,
-          user_email: projectData.user_email,
-          discord_webhook_escalate: projectData.discord_webhook_escalate,
-          discord_webhook_dev: projectData.discord_webhook_dev,
         });
-        setIsTest(projectData.is_test);
-      } catch (err) {
-        console.error("Failed to fetch project:", err);
+      } catch (e) {
+        console.error("Failed to load settings:", e);
+      } finally {
+        setFetching(false);
       }
     };
-    fetchProject();
+    load();
   }, []);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const toggleSection = (key) => {
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const handleSubmit = async (e) => {
@@ -52,207 +187,295 @@ function Settings() {
     setSuccess(false);
     setLoading(true);
 
+    // Only send non-empty, non-masked values
+    const payload = {};
+    Object.entries(form).forEach(([k, v]) => {
+      if (v && v !== "••••••" && v !== HIDDEN_MARKER) {
+        payload[k] = v;
+      }
+    });
+
     try {
-      await authAPI.updateSettings(formData);
+      const res = await authAPI.updateSettings(payload);
+      setSetupStatus(res.data.project?.setup_status || {});
       setSuccess(true);
-
-      const updatedProject = { ...project, ...formData };
-      localStorage.setItem("project", JSON.stringify(updatedProject));
-
+      localStorage.setItem("project", JSON.stringify(res.data.project));
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       const detail = err.response?.data?.detail;
-      if (detail?.errors) {
-        setError(detail.errors.map((e) => e.message).join(", "));
-      } else if (typeof detail === "string") {
-        setError(detail);
-      } else {
-        setError("Failed to update settings. Please try again.");
-      }
+      setError(
+        typeof detail === "string" ? detail : "Failed to update settings.",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  if (!project) {
+  if (fetching) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
-
         <div className="flex-1 flex items-center justify-center">
-          <span className="loader"></span>
+          <span className="loader" />
         </div>
       </div>
     );
   }
 
+  const disabled = isTest;
+
   return (
     <div className="min-h-screen">
       <Navbar />
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        <h1 className="text-2xl font-semibold text-white mb-1">
+          Project Settings
+        </h1>
+        <p className="text-sm text-gray-400 mb-8">
+          Configure your credentials to start monitoring.
+        </p>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-medium text-white mb-2">
-            Project Settings
-          </h1>
-        </div>
+        {isTest && (
+          <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-start">
+            <AlertCircle
+              className="text-amber-400 mr-3 shrink-0 mt-0.5"
+              size={16}
+            />
+            <p className="text-amber-300 text-sm">
+              This is a test project. Credentials are hidden and settings are
+              read-only.
+            </p>
+          </div>
+        )}
+
+        {!isTest && !setupStatus.loki && (
+          <div className="mb-6 p-4 bg-sky-500/10 border border-sky-500/30 rounded-lg flex items-start">
+            <AlertCircle
+              className="text-sky-400 mr-3 shrink-0 mt-0.5"
+              size={16}
+            />
+            <div>
+              <p className="text-sky-300 text-sm font-medium">
+                Setup incomplete
+              </p>
+              <p className="text-sky-400/70 text-xs mt-0.5">
+                Configure at minimum: Loki credentials + Groq API key to start
+                monitoring.
+              </p>
+            </div>
+          </div>
+        )}
 
         {success && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start">
-            <CheckCircle
-              className="text-green-500 mr-3 flex-shrink-0"
-              size={20}
-            />
-            <p className="text-green-700 text-sm">
-              Settings updated successfully!
+          <div className="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center">
+            <CheckCircle className="text-green-400 mr-3 shrink-0" size={16} />
+            <p className="text-green-300 text-sm">
+              Settings saved successfully.
             </p>
           </div>
         )}
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
-            <AlertCircle
-              className="text-red-500 mr-3 flex-shrink-0"
-              size={20}
-            />
-            <p className="text-red-700 text-sm">{error}</p>
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center">
+            <AlertCircle className="text-red-400 mr-3 shrink-0" size={16} />
+            <p className="text-red-300 text-sm">{error}</p>
           </div>
         )}
 
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-lg shadow p-8 space-y-7"
-        >
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">
-              Project Name
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              disabled
-              className="bg-transparent text-sm text-gray-100 w-full px-4 py-3 border border-gray-800 rounded-lg bg-gray-100 cursor-not-allowed"
+        <form onSubmit={handleSubmit} className="space-y-2">
+          {/* Loki */}
+          <div className="border border-gray-800 rounded-xl px-5">
+            <SectionHeader
+              title="Loki / Grafana Cloud"
+              description="Log ingestion source — required to start monitoring"
+              configured={setupStatus.loki}
+              open={openSections.loki}
+              onToggle={() => toggleSection("loki")}
             />
-            <p className="py-1 text-xs text-gray-700 mt-1">
-              Project name cannot be changed
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">
-              API Key (for log ingestion)
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={project.api_key}
-                disabled
-                className="bg-transparent text-sm text-gray-100 w-full px-4 py-3 border border-gray-800 rounded-lg bg-gray-100 cursor-not-allowed"
-              />
-              <button
-                type="button"
-                disabled={isTest}
-                onClick={() => {
-                  navigator.clipboard.writeText(project.api_key);
-                  alert("API key copied to clipboard!");
-                }}
-                className="text-xs px-4 py-3 bg-sky-500 text-white rounded-lg hover:bg-sky-600"
-              >
-                Copy
-              </button>
-            </div>
-            <p className="py-1 text-xs text-gray-700 mt-1">
-              Use this in your log shipper's X-API-Key header
-            </p>
+            {openSections.loki && (
+              <div className="pb-5 space-y-4">
+                <PlainInput
+                  label="Loki URL"
+                  name="loki_url"
+                  value={form.loki_url}
+                  onChange={handleChange}
+                  placeholder="https://logs-prod-021.grafana.net"
+                  disabled={disabled}
+                  hint="From Grafana Cloud → your stack → Loki details"
+                />
+                <PlainInput
+                  label="Loki Username"
+                  name="loki_username"
+                  value={form.loki_username}
+                  onChange={handleChange}
+                  placeholder="123456"
+                  disabled={disabled}
+                  hint="Numeric user ID from Grafana Cloud"
+                />
+                <SecretInput
+                  label="Loki API Key"
+                  name="loki_api_key"
+                  value={form.loki_api_key}
+                  onChange={handleChange}
+                  placeholder="glc_ey..."
+                  disabled={disabled}
+                  hint="Access Policy token with logs:read and logs:write scopes"
+                />
+                <PlainInput
+                  label="Service Label"
+                  name="loki_service"
+                  value={form.loki_service}
+                  onChange={handleChange}
+                  placeholder="log-server"
+                  disabled={disabled}
+                  hint='Must match the {service="..."} label your log server uses'
+                />
+              </div>
+            )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">
-              New Password (leave blank to keep current)
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className="bg-transparent text-sm text-gray-100 w-full px-4 py-3 border border-gray-800 rounded-lg  disabled:bg-transparent disabled:text-gray-500"
-              placeholder="••••••••"
-              minLength={8}
-              disabled={isTest}
-              autoComplete="new-password"
+          {/* Groq */}
+          <div className="border border-gray-800 rounded-xl px-5">
+            <SectionHeader
+              title="Groq API"
+              description="LLM analysis for unknown incidents — required"
+              configured={setupStatus.llm}
+              open={openSections.llm}
+              onToggle={() => toggleSection("llm")}
             />
+            {openSections.llm && (
+              <div className="pb-5 space-y-4">
+                <SecretInput
+                  label="Groq API Key"
+                  name="groq_api_key"
+                  value={form.groq_api_key}
+                  onChange={handleChange}
+                  placeholder="gsk_..."
+                  disabled={disabled}
+                  hint="From console.groq.com — free tier is sufficient"
+                />
+              </div>
+            )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">
-              Log Source URL
-            </label>
-            <input
-              type="url"
-              name="log_source_url"
-              value={formData.log_source_url}
-              onChange={handleChange}
-              className="bg-transparent text-sm text-gray-100 w-full px-4 py-3 border border-gray-800 rounded-lg bg-gray-100 "
-              required
-              disabled={isTest}
+          {/* Langfuse */}
+          <div className="border border-gray-800 rounded-xl px-5">
+            <SectionHeader
+              title="Langfuse Observability"
+              description="LLM tracing, cost tracking, and latency metrics — optional but recommended"
+              configured={setupStatus.observability}
+              open={openSections.observability}
+              onToggle={() => toggleSection("observability")}
             />
+            {openSections.observability && (
+              <div className="pb-5 space-y-4">
+                <SecretInput
+                  label="Public Key"
+                  name="langfuse_public_key"
+                  value={form.langfuse_public_key}
+                  onChange={handleChange}
+                  placeholder="pk-lf-..."
+                  disabled={disabled}
+                  hint="From cloud.langfuse.com → project → Settings"
+                />
+                <SecretInput
+                  label="Secret Key"
+                  name="langfuse_secret_key"
+                  value={form.langfuse_secret_key}
+                  onChange={handleChange}
+                  placeholder="sk-lf-..."
+                  disabled={disabled}
+                />
+                <PlainInput
+                  label="Host"
+                  name="langfuse_host"
+                  value={form.langfuse_host}
+                  onChange={handleChange}
+                  placeholder="https://cloud.langfuse.com"
+                  disabled={disabled}
+                  hint="Only change if self-hosting Langfuse"
+                />
+              </div>
+            )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">
-              Your Email
-            </label>
-            <input
-              type="email"
-              name="user_email"
-              value={formData.user_email}
-              onChange={handleChange}
-              className="bg-transparent text-sm text-gray-100 w-full px-4 py-3 border border-gray-800 rounded-lg bg-gray-100 "
-              required
-              disabled={isTest}
+          {/* Notifications */}
+          <div className="border border-gray-800 rounded-xl px-5">
+            <SectionHeader
+              title="Notifications"
+              description="Discord webhooks and email for incident alerts — optional"
+              configured={setupStatus.notifications}
+              open={openSections.notifications}
+              onToggle={() => toggleSection("notifications")}
             />
+            {openSections.notifications && (
+              <div className="pb-5 space-y-4">
+                <PlainInput
+                  label="On-call Email"
+                  name="user_email"
+                  value={form.user_email}
+                  onChange={handleChange}
+                  placeholder="oncall@example.com"
+                  type="email"
+                  disabled={disabled}
+                  hint="Receives NEEDS_ONCALL incidents"
+                />
+                <PlainInput
+                  label="Discord Webhook — Critical"
+                  name="discord_webhook_escalate"
+                  value={form.discord_webhook_escalate}
+                  onChange={handleChange}
+                  placeholder="https://discord.com/api/webhooks/..."
+                  disabled={disabled}
+                  hint="Receives ESCALATE incidents"
+                />
+                <PlainInput
+                  label="Discord Webhook — Dev Team"
+                  name="discord_webhook_dev"
+                  value={form.discord_webhook_dev}
+                  onChange={handleChange}
+                  placeholder="https://discord.com/api/webhooks/..."
+                  disabled={disabled}
+                  hint="Receives NEEDS_DEV incidents"
+                />
+              </div>
+            )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">
-              Discord Webhook - Critical Incidents
-            </label>
-            <input
-              type="url"
-              name="discord_webhook_escalate"
-              value={formData.discord_webhook_escalate}
-              onChange={handleChange}
-              className="bg-transparent text-sm text-gray-100 w-full px-4 py-3 border border-gray-800 rounded-lg bg-gray-100 "
-              required
-              disabled={isTest}
+          {/* Security */}
+          <div className="border border-gray-800 rounded-xl px-5">
+            <SectionHeader
+              title="Security"
+              description="Change your project password"
+              configured={true}
+              open={openSections.security}
+              onToggle={() => toggleSection("security")}
             />
+            {openSections.security && (
+              <div className="pb-5">
+                <SecretInput
+                  label="New Password (leave blank to keep current)"
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  disabled={disabled}
+                  hint="Minimum 8 characters"
+                />
+              </div>
+            )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">
-              Discord Webhook - Dev Team
-            </label>
-            <input
-              type="url"
-              name="discord_webhook_dev"
-              value={formData.discord_webhook_dev}
-              onChange={handleChange}
-              className="bg-transparent text-sm text-gray-100 w-full px-4 py-3 border border-gray-800 rounded-lg "
-              required
-              disabled={isTest}
-            />
+          <div className="pt-4">
+            <button
+              type="submit"
+              disabled={disabled || loading}
+              className="w-full py-3 rounded-lg text-sm font-medium text-white flex items-center justify-center gap-2 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
+            >
+              <Save size={15} />
+              {loading ? "Saving..." : "Save Settings"}
+            </button>
           </div>
-          <button
-            type="submit"
-            disabled={isTest || loading}
-            className={`text-sm font-normal w-full py-3 rounded-lg font-semibold text-white transition-colors flex items-center justify-center  ${
-              loading
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-sky-500 hover:bg-sky-600"
-            }`}
-          >
-            <Save size={16} className="mr-2" />
-            {loading ? "Saving..." : "Save Settings"}
-          </button>
         </form>
       </div>
     </div>

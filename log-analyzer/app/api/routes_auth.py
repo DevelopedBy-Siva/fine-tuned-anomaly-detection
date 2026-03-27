@@ -16,6 +16,8 @@ from app.services.auth import (
 router = APIRouter()
 security = HTTPBearer()
 
+HIDDEN = "HIDDEN: TEST CREDENTIAL"
+
 
 class ProjectRegister(BaseModel):
     name: str
@@ -46,17 +48,22 @@ class ProjectLogin(BaseModel):
 
 
 class ProjectSettings(BaseModel):
+    # Loki
     loki_url: Optional[str] = None
     loki_username: Optional[str] = None
     loki_api_key: Optional[str] = None
     loki_service: Optional[str] = None
+    # LLM
     groq_api_key: Optional[str] = None
+    # Observability
     langfuse_public_key: Optional[str] = None
     langfuse_secret_key: Optional[str] = None
     langfuse_host: Optional[str] = None
+    # Notifications
     user_email: Optional[str] = None
     discord_webhook_escalate: Optional[str] = None
     discord_webhook_dev: Optional[str] = None
+    # Password change
     password: Optional[str] = None
 
     @validator("password")
@@ -66,23 +73,38 @@ class ProjectSettings(BaseModel):
         return v
 
 
+def _mask(value: Optional[str], is_test: bool = False) -> Optional[str]:
+    """Return masked value for API keys, HIDDEN for test projects."""
+    if not value:
+        return None
+    if is_test:
+        return HIDDEN
+    return "••••••"
+
+
 def _project_to_dict(project: Project) -> dict:
+    t = project.is_test
     return {
         "id": project.id,
         "name": project.name,
         "created_at": project.created_at.isoformat(),
-        "is_test": project.is_test,
-        "loki_url": project.loki_url,
-        "loki_username": project.loki_username,
-        "loki_api_key": "••••••" if project.loki_api_key else None,
-        "loki_service": project.loki_service,
-        "groq_api_key": "••••••" if project.groq_api_key else None,
-        "langfuse_public_key": "••••••" if project.langfuse_public_key else None,
-        "langfuse_secret_key": "••••••" if project.langfuse_secret_key else None,
-        "langfuse_host": project.langfuse_host,
-        "user_email": project.user_email,
-        "discord_webhook_escalate": project.discord_webhook_escalate,
-        "discord_webhook_dev": project.discord_webhook_dev,
+        "is_test": t,
+        # Loki
+        "loki_url": HIDDEN if t else project.loki_url,
+        "loki_username": HIDDEN if t else project.loki_username,
+        "loki_api_key": _mask(project.loki_api_key, t),
+        "loki_service": HIDDEN if t else project.loki_service,
+        # LLM
+        "groq_api_key": _mask(project.groq_api_key, t),
+        # Observability
+        "langfuse_public_key": _mask(project.langfuse_public_key, t),
+        "langfuse_secret_key": _mask(project.langfuse_secret_key, t),
+        "langfuse_host": HIDDEN if t else project.langfuse_host,
+        # Notifications
+        "user_email": HIDDEN if t else project.user_email,
+        "discord_webhook_escalate": HIDDEN if t else project.discord_webhook_escalate,
+        "discord_webhook_dev": HIDDEN if t else project.discord_webhook_dev,
+        # Setup status
         "setup_complete": all(
             [
                 project.loki_url,
@@ -91,6 +113,22 @@ def _project_to_dict(project: Project) -> dict:
                 project.groq_api_key,
             ]
         ),
+        "setup_status": {
+            "loki": all(
+                [project.loki_url, project.loki_username, project.loki_api_key]
+            ),
+            "llm": bool(project.groq_api_key),
+            "observability": all(
+                [project.langfuse_public_key, project.langfuse_secret_key]
+            ),
+            "notifications": any(
+                [
+                    project.user_email,
+                    project.discord_webhook_escalate,
+                    project.discord_webhook_dev,
+                ]
+            ),
+        },
     }
 
 
@@ -111,9 +149,14 @@ def get_current_project(
 
 @router.post("/register")
 def register_project(data: ProjectRegister, db: Session = Depends(get_db)):
+    """Name + password only. All credentials configured in Settings."""
     if db.query(Project).filter(Project.name == data.name).first():
         raise HTTPException(status_code=400, detail="Project name already exists")
-    project = Project(name=data.name, password_hash=hash_password(data.password))
+
+    project = Project(
+        name=data.name,
+        password_hash=hash_password(data.password),
+    )
     try:
         db.add(project)
         db.commit()
@@ -125,7 +168,7 @@ def register_project(data: ProjectRegister, db: Session = Depends(get_db)):
             "access_token": token,
             "token_type": "bearer",
             "project": _project_to_dict(project),
-            "message": "Project created. Go to Settings to configure Loki, Groq, and notification credentials.",
+            "message": "Project created. Configure your credentials in Settings to start monitoring.",
         }
     except Exception:
         db.rollback()
@@ -189,7 +232,10 @@ def update_settings(
     try:
         db.commit()
         db.refresh(project)
-        return {"message": "Settings updated", "project": _project_to_dict(project)}
+        return {
+            "message": "Settings updated successfully",
+            "project": _project_to_dict(project),
+        }
     except Exception:
         db.rollback()
         raise HTTPException(status_code=500, detail="Failed to update settings")
