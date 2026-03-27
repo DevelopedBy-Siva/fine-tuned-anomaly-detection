@@ -10,12 +10,11 @@ from datetime import datetime, UTC
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
-API_KEY = os.getenv("LOGSHIPPER_API_KEY")
 LOKI_URL = os.getenv("LOKI_URL", "")
 LOKI_USERNAME = os.getenv("LOKI_USERNAME", "")
 LOKI_API_KEY = os.getenv("LOKI_API_KEY", "")
@@ -34,11 +33,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-def verify_api_key(x_api_key: str = Header(None)):
-    if x_api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 def _loki_auth_header() -> str:
@@ -640,7 +634,7 @@ async def startup_event():
             )
 
 
-@app.post("/api/start", dependencies=[Depends(verify_api_key)])
+@app.post("/api/start")
 async def start_generation(duration: int = 300):
     ok, msg = await log_generator.start(duration=duration)
     return {
@@ -651,7 +645,7 @@ async def start_generation(duration: int = 300):
     }
 
 
-@app.post("/api/stop", dependencies=[Depends(verify_api_key)])
+@app.post("/api/stop")
 async def stop_generation():
     ok, msg = await log_generator.stop()
     return {
@@ -661,7 +655,7 @@ async def stop_generation():
     }
 
 
-@app.get("/api/status", dependencies=[Depends(verify_api_key)])
+@app.get("/api/status")
 async def get_status():
     return {
         "status": "running" if log_generator.running else "idle",
@@ -673,7 +667,7 @@ async def get_status():
     }
 
 
-@app.post("/api/scenario/{scenario_name}", dependencies=[Depends(verify_api_key)])
+@app.post("/api/scenario/{scenario_name}")
 async def run_scenario(scenario_name: str):
     """
     Fire a correlated error scenario against Loki.
@@ -702,7 +696,7 @@ async def run_scenario(scenario_name: str):
     }
 
 
-@app.get("/api/scenario", dependencies=[Depends(verify_api_key)])
+@app.get("/api/scenario")
 async def list_scenarios():
     """List all available test scenarios."""
     return {

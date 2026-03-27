@@ -1,14 +1,3 @@
-"""
-worker/tasks.py
-
-Changes from original:
-  - cluster_log_redis() removed
-  - cluster_log_db() added — pure PostgreSQL clustering, no Redis required
-  - _fetch_recent_root_cause_candidates(), _apply_root_cause_chain(),
-    analyze_incident(), run_root_cause_chaining(), process_log_batch()
-    are all UNCHANGED
-"""
-
 from datetime import datetime, timedelta
 
 CLUSTER_WINDOW_MINUTES = 2
@@ -16,35 +5,12 @@ MAX_SAMPLES = 10
 ROOT_CAUSE_LOOKBACK_MINUTES = 10
 
 
-# ---------------------------------------------------------------------------
-# Clustering — DB-only, no Redis
-# ---------------------------------------------------------------------------
-
-
-def cluster_log_db(
-    project_id: str, source: str, environment: str, parsed_log, signature: str
-):
-    """
-    Group log lines into incidents using a pure PostgreSQL query.
-
-    Replaces cluster_log_redis(). Behaviour is identical:
-      - If an open incident with this signature exists within the
-        CLUSTER_WINDOW_MINUTES window → increment its count and return it
-      - Otherwise → create a new incident and return it
-
-    The Redis TTL-based cache is replaced by filtering on last_seen:
-      last_seen >= now - CLUSTER_WINDOW_MINUTES
-
-    Trade-off: one extra DB read per log line vs zero for the Redis cache hit.
-    Acceptable for a portfolio project — add Redis back if throughput requires it.
-    """
+def cluster_log_db(project_id, source, environment, parsed_log, signature):
     from app.services.storage import Incident, SessionLocal
 
     db = SessionLocal()
     try:
         window_start = datetime.utcnow() - timedelta(minutes=CLUSTER_WINDOW_MINUTES)
-
-        # Look for an open incident with this signature seen recently
         incident = (
             db.query(Incident)
             .filter(
@@ -58,20 +24,16 @@ def cluster_log_db(
         )
 
         if incident:
-            # Existing incident — bump count and append sample
             incident.count += 1
             incident.last_seen = datetime.utcnow()
-
             if len(incident.sample_lines or []) < MAX_SAMPLES:
                 lines = list(incident.sample_lines or [])
                 lines.append(parsed_log.raw)
                 incident.sample_lines = lines
-
             db.commit()
             db.refresh(incident)
             return incident, False
 
-        # New incident
         new_incident = Incident(
             project_id=project_id,
             source=source,
@@ -87,17 +49,11 @@ def cluster_log_db(
         db.commit()
         db.refresh(new_incident)
         return new_incident, True
-
     finally:
         db.close()
 
 
-# ---------------------------------------------------------------------------
-# Root cause chaining helpers — UNCHANGED
-# ---------------------------------------------------------------------------
-
-
-def _fetch_recent_root_cause_candidates(project_id: str, new_incident_id: str) -> list:
+def _fetch_recent_root_cause_candidates(project_id, new_incident_id):
     from app.services.storage import Incident, SessionLocal
 
     cutoff = datetime.utcnow() - timedelta(minutes=ROOT_CAUSE_LOOKBACK_MINUTES)
@@ -110,7 +66,7 @@ def _fetch_recent_root_cause_candidates(project_id: str, new_incident_id: str) -
                 Incident.id != new_incident_id,
                 Incident.status == "open",
                 Incident.first_seen >= cutoff,
-                Incident.root_cause_incident_id == None,  # noqa: E711
+                Incident.root_cause_incident_id == None,
             )
             .order_by(Incident.first_seen.asc())
             .all()
@@ -122,9 +78,7 @@ def _fetch_recent_root_cause_candidates(project_id: str, new_incident_id: str) -
         db.close()
 
 
-def _apply_root_cause_chain(
-    new_incident_id: str, cause_incident_id: str, explanation: str
-):
+def _apply_root_cause_chain(new_incident_id, cause_incident_id, explanation):
     from app.services.storage import Incident, SessionLocal
 
     db = SessionLocal()
@@ -134,9 +88,7 @@ def _apply_root_cause_chain(
             incident.root_cause_incident_id = cause_incident_id
             incident.cause_explanation = explanation
             db.commit()
-            print(
-                f"[CHAIN] Incident {new_incident_id} linked → cause: {cause_incident_id}"
-            )
+            print(f"[CHAIN] {new_incident_id} linked → {cause_incident_id}")
     except Exception as e:
         print(f"[CHAIN] Failed to persist root cause link: {e}")
         db.rollback()
@@ -144,13 +96,12 @@ def _apply_root_cause_chain(
         db.close()
 
 
-# ---------------------------------------------------------------------------
-# Analysis — UNCHANGED
-# ---------------------------------------------------------------------------
-
-
-def analyze_incident(incident, project_id: str, force: bool = False):
-    from app.services.storage import Analysis, Project, SessionLocal
+def analyze_incident(incident, project, force=False):
+    """
+    project is the full Project ORM object — used for per-project
+    Groq key, Langfuse keys, and notification webhooks.
+    """
+    from app.services.storage import Analysis, SessionLocal
     from app.core.runbook_matcher import match_runbook, should_escalate
     from app.core.decision_engine import get_decision_engine
     from app.services.notifications import get_notification_service
@@ -161,11 +112,6 @@ def analyze_incident(incident, project_id: str, force: bool = False):
             db.query(Analysis).filter(Analysis.incident_id == incident.id).first()
         )
         if existing and not force:
-            return None
-
-        project = db.query(Project).filter(Project.id == project_id).first()
-        if not project:
-            print(f"[WORKER] Project {project_id} not found — skipping analysis")
             return None
 
         notification_service = get_notification_service(project=project)
@@ -188,7 +134,7 @@ def analyze_incident(incident, project_id: str, force: bool = False):
             runbook_match_score = score
         else:
             decision_engine = get_decision_engine()
-            llm_analysis = decision_engine.analyze_incident(incident)
+            llm_analysis = decision_engine.analyze_incident(incident, project=project)
             if not llm_analysis:
                 print(f"[WORKER] LLM returned None for incident {incident.id}")
                 return None
@@ -236,8 +182,8 @@ def analyze_incident(incident, project_id: str, force: bool = False):
 
         notification_service.route_notification(incident, analysis)
         print(
-            f"[WORKER] Analysis {'updated' if force else 'created'} for incident "
-            f"{incident.id} (count={incident.count}) — {analysis.severity}/{analysis.disposition}"
+            f"[WORKER] Analysis {'updated' if force else 'created'} for "
+            f"{incident.id} — {analysis.severity}/{analysis.disposition}"
         )
         return analysis
 
@@ -245,17 +191,11 @@ def analyze_incident(incident, project_id: str, force: bool = False):
         print(f"[WORKER] analyze_incident failed for {incident.id}: {e}")
         db.rollback()
         raise
-
     finally:
         db.close()
 
 
-# ---------------------------------------------------------------------------
-# Root cause chaining — UNCHANGED
-# ---------------------------------------------------------------------------
-
-
-def run_root_cause_chaining(new_incident, project_id: str):
+def run_root_cause_chaining(new_incident, project_id, project):
     from app.core.decision_engine import get_decision_engine
 
     try:
@@ -264,12 +204,12 @@ def run_root_cause_chaining(new_incident, project_id: str):
             return
 
         print(
-            f"[CHAIN] Checking root cause for incident {new_incident.id} "
-            f"against {len(candidates)} candidate(s)"
+            f"[CHAIN] Checking {new_incident.id} against {len(candidates)} candidate(s)"
         )
-
         decision_engine = get_decision_engine()
-        result = decision_engine.chain_root_cause(new_incident, candidates)
+        result = decision_engine.chain_root_cause(
+            new_incident, candidates, project=project
+        )
 
         if result and result.has_cause and result.cause_incident_id:
             _apply_root_cause_chain(
@@ -278,44 +218,46 @@ def run_root_cause_chaining(new_incident, project_id: str):
                 explanation=result.cause_explanation or "",
             )
         else:
-            print(f"[CHAIN] No causal link found for incident {new_incident.id}")
+            print(f"[CHAIN] No causal link found for {new_incident.id}")
 
     except Exception as e:
         print(f"[CHAIN] run_root_cause_chaining failed for {new_incident.id}: {e}")
 
 
-# ---------------------------------------------------------------------------
-# Batch processor — UNCHANGED except cluster call
-# ---------------------------------------------------------------------------
-
-
 def process_log_batch(payload: dict):
     """
-    Entry point called by loki_watcher.py for every poll batch.
+    Entry point called by loki_watcher.
 
-    Signature is identical to the original so loki_watcher can call it
-    the same way stream.py did.
+    payload keys:
+      project_id  — str UUID (direct, no api_key lookup needed)
+      source      — str
+      environment — str
+      logs        — list[str]
+      _project    — Project ORM object (passed through for creds)
     """
     from app.core.parser import ParsedLog
     from app.core.signatures import generate_signature
     from app.services.storage import SessionLocal, Project
 
-    api_key = payload.get("api_key", "")
+    project_id = payload.get("project_id")
     source = payload["source"]
     environment = payload["environment"]
     logs = payload["logs"]
+    project = payload.get("_project")
 
-    db = SessionLocal()
-    try:
-        project = db.query(Project).filter(Project.api_key == api_key).first()
-        if not project:
-            print(f"[WORKER] No project found for api_key — skipping batch")
-            return
-        project_id = project.id
-        project_name = project.name
-        print(f"[WORKER] Processing {len(logs)} logs for project '{project_name}'")
-    finally:
-        db.close()
+    if project is None:
+        db = SessionLocal()
+        try:
+            project = db.query(Project).filter(Project.id == project_id).first()
+            if project:
+                db.expunge(project)
+            else:
+                print(f"[WORKER] Project {project_id} not found — skipping batch")
+                return
+        finally:
+            db.close()
+
+    print(f"[WORKER] Processing {len(logs)} logs for project '{project.name}'")
 
     created = 0
     updated = 0
@@ -328,8 +270,6 @@ def process_log_batch(payload: dict):
                 continue
 
             sig = generate_signature(source, parsed)
-
-            # DB-only clustering — Redis removed
             incident, is_new = cluster_log_db(
                 project_id=project_id,
                 source=source,
@@ -339,12 +279,12 @@ def process_log_batch(payload: dict):
             )
 
             if is_new:
-                analyze_incident(incident, project_id, force=False)
-                run_root_cause_chaining(incident, project_id)
+                analyze_incident(incident, project=project, force=False)
+                run_root_cause_chaining(incident, project_id, project=project)
                 created += 1
             else:
                 if incident.count in {5, 10, 20}:
-                    analyze_incident(incident, project_id, force=True)
+                    analyze_incident(incident, project=project, force=True)
                 updated += 1
 
         except Exception as e:

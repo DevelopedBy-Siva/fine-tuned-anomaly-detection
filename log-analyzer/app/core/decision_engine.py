@@ -12,37 +12,33 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-try:
-    from langfuse import Langfuse
+def _make_langfuse(project=None):
+    """
+    Return a Langfuse client using project credentials if available,
+    falling back to env vars. Returns None if no keys are configured.
+    """
+    try:
+        from langfuse import Langfuse
 
-    _langfuse = Langfuse(
-        public_key=os.getenv("LANGFUSE_PUBLIC_KEY", ""),
-        secret_key=os.getenv("LANGFUSE_SECRET_KEY", ""),
-        host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
-    )
-    LANGFUSE_ENABLED = bool(
-        os.getenv("LANGFUSE_PUBLIC_KEY") and os.getenv("LANGFUSE_SECRET_KEY")
-    )
-    if LANGFUSE_ENABLED:
-        print("[LANGFUSE] Tracing enabled")
-    else:
-        print("[LANGFUSE] Keys not set — tracing disabled")
-except ImportError:
-    _langfuse = None
-    LANGFUSE_ENABLED = False
-    print("[LANGFUSE] langfuse package not installed — tracing disabled")
+        public_key = (project.langfuse_public_key if project else None) or os.getenv(
+            "LANGFUSE_PUBLIC_KEY", ""
+        )
+        secret_key = (project.langfuse_secret_key if project else None) or os.getenv(
+            "LANGFUSE_SECRET_KEY", ""
+        )
+        host = (project.langfuse_host if project else None) or os.getenv(
+            "LANGFUSE_HOST", "https://cloud.langfuse.com"
+        )
 
+        if not public_key or not secret_key:
+            return None
 
-def _trace(name: str, **metadata):
-    """Create a Langfuse trace if enabled, else return a no-op stub."""
-    if LANGFUSE_ENABLED and _langfuse:
-        return _langfuse.trace(name=name, metadata=metadata)
-    return _NoOpTrace()
+        return Langfuse(public_key=public_key, secret_key=secret_key, host=host)
+    except ImportError:
+        return None
 
 
 class _NoOpTrace:
-    """Stub so the rest of the code never needs to check LANGFUSE_ENABLED."""
-
     def span(self, *a, **kw):
         return _NoOpSpan()
 
@@ -64,38 +60,30 @@ class _NoOpSpan:
         return self
 
 
+def _trace(project=None, **metadata):
+    lf = _make_langfuse(project)
+    if lf:
+        return lf.trace(metadata=metadata)
+    return _NoOpTrace()
+
+
 class IncidentAnalysis(BaseModel):
     severity: str = Field(description="Severity level: low, medium, high, or critical")
     disposition: str = Field(
-        description="Action to take: NO_ACTION, OBSERVE, NEEDS_DEV, NEEDS_ONCALL, or ESCALATE"
+        description="NO_ACTION, OBSERVE, NEEDS_DEV, NEEDS_ONCALL, or ESCALATE"
     )
     confidence: float = Field(description="Confidence score between 0.0 and 1.0")
     summary: str = Field(description="2-3 sentence summary of the issue")
-    next_steps: list[str] = Field(
-        description="3-5 concrete action items to resolve or investigate"
-    )
+    next_steps: list[str] = Field(description="3-5 concrete action items")
     ticket_title: str = Field(description="Concise ticket title (max 100 chars)")
     ticket_body: str = Field(description="Detailed ticket description for developers")
 
 
 class RootCauseResult(BaseModel):
-    has_cause: bool = Field(
-        description="True if one of the earlier incidents clearly caused this one."
-    )
-    cause_incident_id: Optional[str] = Field(
-        default=None,
-        description="The ID of the earlier incident that caused this one. null if has_cause is False.",
-    )
-    cause_explanation: Optional[str] = Field(
-        default=None,
-        description=(
-            "1-2 sentence explanation of the causal relationship. "
-            "null if has_cause is False."
-        ),
-    )
-    confidence: float = Field(
-        description="Confidence in the causal link, between 0.0 and 1.0."
-    )
+    has_cause: bool = Field(description="True if an earlier incident caused this one")
+    cause_incident_id: Optional[str] = Field(default=None)
+    cause_explanation: Optional[str] = Field(default=None)
+    confidence: float = Field(description="Confidence between 0.0 and 1.0")
 
 
 def validate_analysis(analysis: IncidentAnalysis, incident) -> IncidentAnalysis:
@@ -160,63 +148,52 @@ def validate_analysis(analysis: IncidentAnalysis, incident) -> IncidentAnalysis:
     return analysis
 
 
-def _get_groq_keys() -> list[str]:
-    keys = []
-    for var in ["GROQ_API_KEY", "GROQ_API_KEY_2", "GROQ_API_KEY_3"]:
-        val = os.getenv(var, "").strip()
-        if val:
-            keys.append(val)
-    return keys
+def _make_llm(project=None) -> Optional[ChatGroq]:
+    key = (project.groq_api_key if project else None) or ""
 
+    if not key:
+        keys = [
+            os.getenv(v, "").strip()
+            for v in ["GROQ_API_KEY", "GROQ_API_KEY_2", "GROQ_API_KEY_3"]
+            if os.getenv(v, "").strip()
+        ]
+        key = random.choice(keys) if keys else ""
 
-def _make_llm() -> Optional[ChatGroq]:
-    keys = _get_groq_keys()
-    if not keys:
-        print("Warning: No GROQ_API_KEY found. LLM analysis disabled.")
+    if not key:
+        print("[LLM] No Groq API key configured — LLM analysis disabled")
         return None
-    return ChatGroq(
-        model="llama-3.3-70b-versatile",
-        temperature=0.3,
-        api_key=random.choice(keys),
-    )
+
+    return ChatGroq(model="llama-3.3-70b-versatile", temperature=0.3, api_key=key)
 
 
 class DecisionEngine:
 
     def __init__(self):
         self.parser = PydanticOutputParser(pydantic_object=IncidentAnalysis)
-
         self.prompt = ChatPromptTemplate.from_messages(
             [
                 (
                     "system",
                     """You are an expert SRE analyzing production incidents.
 
-Your job is to:
-1. Assess the severity of the issue
-2. Recommend the appropriate action (disposition)
-3. Provide clear next steps for resolution
-4. Draft a ticket for the development team
-
 Severity guidelines:
-- CRITICAL: Service down, data loss, security breach, OutOfMemoryError, heap space errors, segfaults, fatal errors, affects all users
-- HIGH: Major feature broken, database connection errors, null pointer exceptions, affects many users, revenue impact
-- MEDIUM: Feature partially broken, intermittent errors, affects some users, has workarounds
-- LOW: Minor issue, cosmetic, logging errors, affects few users
+- CRITICAL: Service down, data loss, OutOfMemoryError, heap space, segfaults, fatal errors
+- HIGH: Database connection errors, null pointer exceptions, major features broken
+- MEDIUM: Feature partially broken, intermittent errors
+- LOW: Minor issues, cosmetic, affects few users
 
-Disposition guidelines (must align with severity):
-- ESCALATE: ONLY for CRITICAL/HIGH severity - requires immediate attention (page on-call)
-- NEEDS_ONCALL: For HIGH severity - notify on-call engineer during business hours
-- NEEDS_DEV: For MEDIUM/HIGH severity - standard development ticket needed
-- OBSERVE: For LOW/MEDIUM severity - monitor for patterns, only act if it repeats
-- NO_ACTION: For LOW severity - known noise, safe to ignore
+Disposition guidelines:
+- ESCALATE: CRITICAL/HIGH — page on-call immediately
+- NEEDS_ONCALL: HIGH — notify on-call during business hours
+- NEEDS_DEV: MEDIUM/HIGH — standard dev ticket
+- OBSERVE: LOW/MEDIUM — monitor for patterns
+- NO_ACTION: LOW — known noise
 
-**CRITICAL RULES**:
-- If severity is CRITICAL or HIGH → disposition MUST be ESCALATE or NEEDS_ONCALL
-- OutOfMemoryError, heap space errors, segfaults, fatal errors → ALWAYS CRITICAL severity with ESCALATE disposition
-- Database connection errors, null pointer exceptions → ALWAYS HIGH severity minimum
-- If disposition is ESCALATE → severity MUST be CRITICAL or HIGH
-- ALWAYS provide a ticket_title (never null or empty)
+CRITICAL RULES:
+- CRITICAL or HIGH severity → ESCALATE or NEEDS_ONCALL
+- OutOfMemoryError, heap space, segfaults → ALWAYS CRITICAL + ESCALATE
+- DB connection errors, NPE → ALWAYS HIGH minimum
+- ALWAYS provide ticket_title
 
 {format_instructions}""",
                 ),
@@ -224,22 +201,13 @@ Disposition guidelines (must align with severity):
                     "human",
                     """Analyze this incident:
 
-**Source Service:** {source}
-**Environment:** {environment}
-**Occurrence Count:** {count}
-**First Seen:** {first_seen}
-**Last Seen:** {last_seen}
+Source: {source} | Environment: {environment}
+Count: {count} | First seen: {first_seen} | Last seen: {last_seen}
 
-**Sample Error Logs:**
+Sample logs:
 {sample_logs}
 
-Provide a structured analysis with severity, disposition, summary, next steps, and ticket draft.
-
-IMPORTANT REMINDERS:
-- OutOfMemoryError and heap space errors are ALWAYS CRITICAL severity with ESCALATE disposition
-- Database connection errors are ALWAYS HIGH severity minimum
-- Always provide a ticket_title (never leave it null or empty)
-- Ensure severity and disposition are aligned""",
+{format_instructions}""",
                 ),
             ]
         )
@@ -250,65 +218,54 @@ IMPORTANT REMINDERS:
                 (
                     "system",
                     """You are an expert SRE specializing in distributed systems failure analysis.
+Determine whether a NEW incident was caused by one of several EARLIER incidents.
 
-Your task is to determine whether a NEW incident was caused by one of several EARLIER incidents.
-
-Key reasoning principles:
-- Infrastructure failures cascade: a database pool exhaustion → downstream services timeout → app layer throws NullPointerExceptions
-- Typical propagation delay is 30 seconds to 5 minutes between cause and effect
-- A cause incident must have occurred BEFORE the new incident
-- Not every incident has a cause — many are independent root causes themselves
-- Only assign a cause if the causal relationship is clear and technically plausible
-- Connection pool exhaustion → payment timeouts → null pointers is a classic cascade
-- Auth failures → session errors is a cascade
-- Disk space critical → write failures → data validation errors is a cascade
+Key principles:
+- Infrastructure failures cascade: DB pool exhaustion → timeouts → NullPointerExceptions
+- Typical propagation: 30s to 5 minutes between cause and effect
+- Only assign a cause if technically plausible and clear
+- Not every incident has a cause
 
 {format_instructions}""",
                 ),
                 (
                     "human",
-                    """A NEW incident just occurred. Determine if any of the EARLIER incidents caused it.
-
---- NEW INCIDENT ---
-ID: {new_id}
-Source: {new_source}
-Environment: {new_environment}
-First seen: {new_first_seen}
+                    """NEW INCIDENT:
+ID: {new_id} | Source: {new_source} | First seen: {new_first_seen}
 Signature: {new_signature}
-Sample logs:
-{new_sample_logs}
+Sample: {new_sample_logs}
 
---- EARLIER INCIDENTS (last 10 minutes, oldest first) ---
+EARLIER INCIDENTS (oldest first):
 {earlier_incidents}
 
-Question: Was the new incident caused by one of the earlier incidents?
-
-Instructions:
-- If YES: set has_cause=true, provide the cause_incident_id and a 1-2 sentence cause_explanation
-- If NO (this is its own root cause): set has_cause=false, cause_incident_id=null, cause_explanation=null
-- Be conservative — only assert causation when the chain is technically clear
-- The cause_incident_id MUST be one of the IDs listed above
+Was the new incident caused by one of the earlier incidents?
+- YES: has_cause=true, provide cause_incident_id and cause_explanation
+- NO: has_cause=false, null the other fields
+- cause_incident_id MUST be one of the IDs listed above
 
 {format_instructions}""",
                 ),
             ]
         )
 
-    def analyze_incident(self, incident) -> Optional[IncidentAnalysis]:
+    def analyze_incident(self, incident, project=None) -> Optional[IncidentAnalysis]:
         t0 = time.time()
-
-        trace = _trace(
-            "incident-analysis",
-            incident_id=str(incident.id),
-            source=incident.source,
-            environment=incident.environment,
-            count=incident.count,
-            signature=incident.signature,
+        lf = _make_langfuse(project)
+        trace = (
+            lf.trace(
+                name="incident-analysis",
+                metadata={
+                    "incident_id": str(incident.id),
+                    "source": incident.source,
+                    "count": incident.count,
+                },
+            )
+            if lf
+            else _NoOpTrace()
         )
 
-        llm = _make_llm()
+        llm = _make_llm(project)
         if not llm:
-            trace.update(metadata={"error": "no_llm_key"})
             return None
 
         sample_logs = (
@@ -316,7 +273,7 @@ Instructions:
         )
 
         try:
-            formatted_prompt = self.prompt.format_messages(
+            formatted = self.prompt.format_messages(
                 format_instructions=self.parser.get_format_instructions(),
                 source=incident.source,
                 environment=incident.environment,
@@ -333,20 +290,21 @@ Instructions:
                 input=sample_logs,
             )
 
-            response = llm.invoke(formatted_prompt)
+            response = llm.invoke(formatted)
             elapsed_ms = int((time.time() - t0) * 1000)
 
             usage = getattr(response, "usage_metadata", None)
-            if usage:
-                gen.end(
-                    output=response.content,
-                    usage={
+            gen.end(
+                output=response.content,
+                usage=(
+                    {
                         "input": usage.get("input_tokens", 0),
                         "output": usage.get("output_tokens", 0),
-                    },
-                )
-            else:
-                gen.end(output=response.content)
+                    }
+                    if usage
+                    else {}
+                ),
+            )
 
             analysis = self.parser.parse(response.content)
             analysis = validate_analysis(analysis, incident)
@@ -355,107 +313,85 @@ Instructions:
                 metadata={
                     "severity": analysis.severity,
                     "disposition": analysis.disposition,
-                    "confidence": analysis.confidence,
                     "latency_ms": elapsed_ms,
                     "analysis_source": "llm",
                 }
             )
-
             return analysis
 
         except Exception as e:
             trace.update(metadata={"error": str(e)})
-            print(f"LLM analysis failed: {e}")
+            print(f"[LLM] analyze_incident failed: {e}")
             return None
 
     def chain_root_cause(
-        self, new_incident, earlier_incidents: list
+        self, new_incident, earlier_incidents, project=None
     ) -> Optional[RootCauseResult]:
         if not earlier_incidents:
             return None
 
-        llm = _make_llm()
+        llm = _make_llm(project)
         if not llm:
             return None
 
-        trace = _trace(
-            "root-cause-chaining",
-            new_incident_id=str(new_incident.id),
-            candidate_count=len(earlier_incidents),
+        lf = _make_langfuse(project)
+        trace = (
+            lf.trace(
+                name="root-cause-chaining",
+                metadata={
+                    "new_incident_id": str(new_incident.id),
+                    "candidates": len(earlier_incidents),
+                },
+            )
+            if lf
+            else _NoOpTrace()
         )
 
         earlier_blocks = []
         for inc in earlier_incidents:
             sample = "\n  ".join((inc.sample_lines or [])[:2]) or "N/A"
             earlier_blocks.append(
-                f"ID: {inc.id}\n"
-                f"  Source: {inc.source}\n"
+                f"ID: {inc.id}\n  Source: {inc.source}\n"
                 f"  First seen: {inc.first_seen.strftime('%Y-%m-%d %H:%M:%S')}\n"
-                f"  Signature: {inc.signature}\n"
-                f"  Sample: {sample}"
+                f"  Signature: {inc.signature}\n  Sample: {sample}"
             )
-        earlier_text = "\n\n".join(earlier_blocks)
-        new_sample = "\n".join((new_incident.sample_lines or [])[:3]) or "N/A"
 
         try:
-            formatted_prompt = self.root_cause_prompt.format_messages(
+            formatted = self.root_cause_prompt.format_messages(
                 format_instructions=self.root_cause_parser.get_format_instructions(),
                 new_id=new_incident.id,
                 new_source=new_incident.source,
                 new_environment=new_incident.environment,
                 new_first_seen=new_incident.first_seen.strftime("%Y-%m-%d %H:%M:%S"),
                 new_signature=new_incident.signature,
-                new_sample_logs=new_sample,
-                earlier_incidents=earlier_text,
+                new_sample_logs="\n".join((new_incident.sample_lines or [])[:3])
+                or "N/A",
+                earlier_incidents="\n\n".join(earlier_blocks),
             )
 
             gen = trace.generation(
-                name="root-cause-llm",
-                model="llama-3.3-70b-versatile",
-                model_parameters={"temperature": 0.3},
-                input=new_sample,
+                name="root-cause-llm", model="llama-3.3-70b-versatile"
             )
-
-            response = llm.invoke(formatted_prompt)
-
-            usage = getattr(response, "usage_metadata", None)
-            if usage:
-                gen.end(
-                    output=response.content,
-                    usage={
-                        "input": usage.get("input_tokens", 0),
-                        "output": usage.get("output_tokens", 0),
-                    },
-                )
-            else:
-                gen.end(output=response.content)
+            response = llm.invoke(formatted)
+            gen.end(output=response.content)
 
             result = self.root_cause_parser.parse(response.content)
-
             valid_ids = {inc.id for inc in earlier_incidents}
             if result.has_cause and result.cause_incident_id not in valid_ids:
-                print(
-                    f"[CHAIN] LLM returned invalid cause_incident_id "
-                    f"'{result.cause_incident_id}' — discarding"
-                )
-                trace.update(metadata={"error": "invalid_cause_id"})
+                print(f"[CHAIN] LLM returned invalid cause_incident_id — discarding")
                 return None
 
             trace.update(
                 metadata={
                     "has_cause": result.has_cause,
-                    "cause_incident_id": result.cause_incident_id,
                     "confidence": result.confidence,
                 }
             )
-
             return result
 
         except Exception as e:
             trace.update(metadata={"error": str(e)})
-            print(
-                f"[CHAIN] chain_root_cause failed for incident {new_incident.id}: {e}"
-            )
+            print(f"[CHAIN] chain_root_cause failed: {e}")
             return None
 
 
