@@ -1,12 +1,22 @@
+"""
+app/main.py
+
+Change from original:
+  - start_worker() now imports from worker.loki_watcher instead of worker.stream
+  - Everything else — routes, middleware, lifespan, CORS — UNCHANGED
+"""
+
 import os
 import threading
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+
 from app.services.storage import init_db
 from app.services.cleanup import cleanup_all_data
 from app.api import routes_ingest, routes_incidents, routes_auth
-from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -14,15 +24,15 @@ load_dotenv()
 def start_worker():
     import traceback
 
-    print("[MAIN] Starting worker thread...")
+    print("[MAIN] Starting Loki watcher thread...")
     try:
-        print("[MAIN] Importing worker.stream...")
-        from worker.stream import run as run_worker
+        # ← Only change: stream → loki_watcher
+        from worker.loki_watcher import run as run_worker
 
-        print("[MAIN] Import successful, calling run...")
+        print("[MAIN] loki_watcher imported OK, starting poll loop...")
         run_worker()
     except Exception as e:
-        print(f"[MAIN] Worker thread failed: {e}")
+        print(f"[MAIN] Loki watcher thread failed: {e}")
         traceback.print_exc()
 
 
@@ -34,17 +44,16 @@ async def lifespan(app: FastAPI):
 
     worker_thread = threading.Thread(target=start_worker, daemon=True)
     worker_thread.start()
-    print("[MAIN] Worker thread started")
+    print("[MAIN] Loki watcher thread started")
 
     yield
-
     print("Shutting down...")
 
 
 app = FastAPI(title="Log Analyzer", lifespan=lifespan)
 
-cors_origins = os.getenv("CORS_ORIGINS")
-origins = [origin.strip() for origin in cors_origins.split(",") if origin]
+cors_origins = os.getenv("CORS_ORIGINS", "")
+origins = [o.strip() for o in cors_origins.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,

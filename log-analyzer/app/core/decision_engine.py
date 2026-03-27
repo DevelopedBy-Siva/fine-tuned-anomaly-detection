@@ -1,6 +1,8 @@
 import os
 import random
+import time
 from typing import Optional
+
 from langchain_groq import ChatGroq
 from langchain.prompts import ChatPromptTemplate
 from langchain.output_parsers import PydanticOutputParser
@@ -8,6 +10,58 @@ from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+try:
+    from langfuse import Langfuse
+
+    _langfuse = Langfuse(
+        public_key=os.getenv("LANGFUSE_PUBLIC_KEY", ""),
+        secret_key=os.getenv("LANGFUSE_SECRET_KEY", ""),
+        host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
+    )
+    LANGFUSE_ENABLED = bool(
+        os.getenv("LANGFUSE_PUBLIC_KEY") and os.getenv("LANGFUSE_SECRET_KEY")
+    )
+    if LANGFUSE_ENABLED:
+        print("[LANGFUSE] Tracing enabled")
+    else:
+        print("[LANGFUSE] Keys not set — tracing disabled")
+except ImportError:
+    _langfuse = None
+    LANGFUSE_ENABLED = False
+    print("[LANGFUSE] langfuse package not installed — tracing disabled")
+
+
+def _trace(name: str, **metadata):
+    """Create a Langfuse trace if enabled, else return a no-op stub."""
+    if LANGFUSE_ENABLED and _langfuse:
+        return _langfuse.trace(name=name, metadata=metadata)
+    return _NoOpTrace()
+
+
+class _NoOpTrace:
+    """Stub so the rest of the code never needs to check LANGFUSE_ENABLED."""
+
+    def span(self, *a, **kw):
+        return _NoOpSpan()
+
+    def generation(self, *a, **kw):
+        return _NoOpSpan()
+
+    def update(self, *a, **kw):
+        return self
+
+    def end(self, *a, **kw):
+        return self
+
+
+class _NoOpSpan:
+    def end(self, *a, **kw):
+        return self
+
+    def update(self, *a, **kw):
+        return self
 
 
 class IncidentAnalysis(BaseModel):
@@ -26,7 +80,7 @@ class IncidentAnalysis(BaseModel):
 
 class RootCauseResult(BaseModel):
     has_cause: bool = Field(
-        description="True if one of the earlier incidents clearly caused this one, False if this is an independent root cause."
+        description="True if one of the earlier incidents clearly caused this one."
     )
     cause_incident_id: Optional[str] = Field(
         default=None,
@@ -35,8 +89,7 @@ class RootCauseResult(BaseModel):
     cause_explanation: Optional[str] = Field(
         default=None,
         description=(
-            "1-2 sentence explanation of the causal relationship: what failed first, "
-            "how it propagated, and why this incident is a downstream effect. "
+            "1-2 sentence explanation of the causal relationship. "
             "null if has_cause is False."
         ),
     )
@@ -68,12 +121,12 @@ def validate_analysis(analysis: IncidentAnalysis, incident) -> IncidentAnalysis:
     sample_text = " ".join(incident.sample_lines or []).lower()
     full_text = f"{incident.signature.lower()} {sample_text}"
 
-    if any(pattern in full_text for pattern in critical_patterns):
+    if any(p in full_text for p in critical_patterns):
         if analysis.severity not in ["critical", "high"]:
             analysis.severity = "critical"
         if analysis.disposition not in ["ESCALATE", "NEEDS_ONCALL"]:
             analysis.disposition = "ESCALATE"
-    elif any(pattern in full_text for pattern in high_patterns):
+    elif any(p in full_text for p in high_patterns):
         if analysis.severity == "low":
             analysis.severity = "high"
 
@@ -121,17 +174,18 @@ def _make_llm() -> Optional[ChatGroq]:
     if not keys:
         print("Warning: No GROQ_API_KEY found. LLM analysis disabled.")
         return None
-    key = random.choice(keys)
     return ChatGroq(
         model="llama-3.3-70b-versatile",
         temperature=0.3,
-        api_key=key,
+        api_key=random.choice(keys),
     )
 
 
 class DecisionEngine:
+
     def __init__(self):
         self.parser = PydanticOutputParser(pydantic_object=IncidentAnalysis)
+
         self.prompt = ChatPromptTemplate.from_messages(
             [
                 (
@@ -157,7 +211,7 @@ Disposition guidelines (must align with severity):
 - OBSERVE: For LOW/MEDIUM severity - monitor for patterns, only act if it repeats
 - NO_ACTION: For LOW severity - known noise, safe to ignore
 
-**CRITICAL RULES**: 
+**CRITICAL RULES**:
 - If severity is CRITICAL or HIGH → disposition MUST be ESCALATE or NEEDS_ONCALL
 - OutOfMemoryError, heap space errors, segfaults, fatal errors → ALWAYS CRITICAL severity with ESCALATE disposition
 - Database connection errors, null pointer exceptions → ALWAYS HIGH severity minimum
@@ -190,7 +244,6 @@ IMPORTANT REMINDERS:
             ]
         )
 
-        # --- root cause chaining prompt ---
         self.root_cause_parser = PydanticOutputParser(pydantic_object=RootCauseResult)
         self.root_cause_prompt = ChatPromptTemplate.from_messages(
             [
@@ -242,14 +295,27 @@ Instructions:
         )
 
     def analyze_incident(self, incident) -> Optional[IncidentAnalysis]:
+        t0 = time.time()
+
+        trace = _trace(
+            "incident-analysis",
+            incident_id=str(incident.id),
+            source=incident.source,
+            environment=incident.environment,
+            count=incident.count,
+            signature=incident.signature,
+        )
+
         llm = _make_llm()
         if not llm:
+            trace.update(metadata={"error": "no_llm_key"})
             return None
 
+        sample_logs = (
+            "\n".join(incident.sample_lines[:3]) if incident.sample_lines else "N/A"
+        )
+
         try:
-            sample_logs = (
-                "\n".join(incident.sample_lines[:3]) if incident.sample_lines else "N/A"
-            )
             formatted_prompt = self.prompt.format_messages(
                 format_instructions=self.parser.get_format_instructions(),
                 source=incident.source,
@@ -259,34 +325,64 @@ Instructions:
                 last_seen=incident.last_seen.strftime("%Y-%m-%d %H:%M:%S"),
                 sample_logs=sample_logs,
             )
+
+            gen = trace.generation(
+                name="llm-analysis",
+                model="llama-3.3-70b-versatile",
+                model_parameters={"temperature": 0.3},
+                input=sample_logs,
+            )
+
             response = llm.invoke(formatted_prompt)
+            elapsed_ms = int((time.time() - t0) * 1000)
+
+            usage = getattr(response, "usage_metadata", None)
+            if usage:
+                gen.end(
+                    output=response.content,
+                    usage={
+                        "input": usage.get("input_tokens", 0),
+                        "output": usage.get("output_tokens", 0),
+                    },
+                )
+            else:
+                gen.end(output=response.content)
+
             analysis = self.parser.parse(response.content)
             analysis = validate_analysis(analysis, incident)
+
+            trace.update(
+                metadata={
+                    "severity": analysis.severity,
+                    "disposition": analysis.disposition,
+                    "confidence": analysis.confidence,
+                    "latency_ms": elapsed_ms,
+                    "analysis_source": "llm",
+                }
+            )
+
             return analysis
 
         except Exception as e:
+            trace.update(metadata={"error": str(e)})
             print(f"LLM analysis failed: {e}")
             return None
 
     def chain_root_cause(
         self, new_incident, earlier_incidents: list
     ) -> Optional[RootCauseResult]:
-        """
-        Given a newly created incident and a list of recent open incidents,
-        ask the LLM whether one of the earlier incidents caused this one.
-
-        Returns a RootCauseResult if a causal link is found (has_cause=True),
-        or None if the LLM finds no clear cause or the call fails.
-
-        Only earlier_incidents with has_cause=False (i.e. root causes themselves)
-        should be passed in — we chain only to root causes, not to effects.
-        """
         if not earlier_incidents:
             return None
 
         llm = _make_llm()
         if not llm:
             return None
+
+        trace = _trace(
+            "root-cause-chaining",
+            new_incident_id=str(new_incident.id),
+            candidate_count=len(earlier_incidents),
+        )
 
         earlier_blocks = []
         for inc in earlier_incidents:
@@ -299,7 +395,6 @@ Instructions:
                 f"  Sample: {sample}"
             )
         earlier_text = "\n\n".join(earlier_blocks)
-
         new_sample = "\n".join((new_incident.sample_lines or [])[:3]) or "N/A"
 
         try:
@@ -313,7 +408,28 @@ Instructions:
                 new_sample_logs=new_sample,
                 earlier_incidents=earlier_text,
             )
+
+            gen = trace.generation(
+                name="root-cause-llm",
+                model="llama-3.3-70b-versatile",
+                model_parameters={"temperature": 0.3},
+                input=new_sample,
+            )
+
             response = llm.invoke(formatted_prompt)
+
+            usage = getattr(response, "usage_metadata", None)
+            if usage:
+                gen.end(
+                    output=response.content,
+                    usage={
+                        "input": usage.get("input_tokens", 0),
+                        "output": usage.get("output_tokens", 0),
+                    },
+                )
+            else:
+                gen.end(output=response.content)
+
             result = self.root_cause_parser.parse(response.content)
 
             valid_ids = {inc.id for inc in earlier_incidents}
@@ -322,11 +438,21 @@ Instructions:
                     f"[CHAIN] LLM returned invalid cause_incident_id "
                     f"'{result.cause_incident_id}' — discarding"
                 )
+                trace.update(metadata={"error": "invalid_cause_id"})
                 return None
+
+            trace.update(
+                metadata={
+                    "has_cause": result.has_cause,
+                    "cause_incident_id": result.cause_incident_id,
+                    "confidence": result.confidence,
+                }
+            )
 
             return result
 
         except Exception as e:
+            trace.update(metadata={"error": str(e)})
             print(
                 f"[CHAIN] chain_root_cause failed for incident {new_incident.id}: {e}"
             )

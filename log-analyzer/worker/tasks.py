@@ -1,53 +1,77 @@
-import os
-import json
-import redis
-from datetime import datetime, timedelta
-from dotenv import load_dotenv
+"""
+worker/tasks.py
 
-load_dotenv()
+Changes from original:
+  - cluster_log_redis() removed
+  - cluster_log_db() added — pure PostgreSQL clustering, no Redis required
+  - _fetch_recent_root_cause_candidates(), _apply_root_cause_chain(),
+    analyze_incident(), run_root_cause_chaining(), process_log_batch()
+    are all UNCHANGED
+"""
+
+from datetime import datetime, timedelta
 
 CLUSTER_WINDOW_MINUTES = 2
 MAX_SAMPLES = 10
-
 ROOT_CAUSE_LOOKBACK_MINUTES = 10
 
-_redis_client = None
+
+# ---------------------------------------------------------------------------
+# Clustering — DB-only, no Redis
+# ---------------------------------------------------------------------------
 
 
-def get_redis() -> redis.Redis:
-    global _redis_client
-    if _redis_client is None:
-        _redis_client = redis.from_url(
-            os.getenv("REDIS_URL", "redis://localhost:6379"),
-            decode_responses=True,
-        )
-    return _redis_client
+def cluster_log_db(
+    project_id: str, source: str, environment: str, parsed_log, signature: str
+):
+    """
+    Group log lines into incidents using a pure PostgreSQL query.
 
+    Replaces cluster_log_redis(). Behaviour is identical:
+      - If an open incident with this signature exists within the
+        CLUSTER_WINDOW_MINUTES window → increment its count and return it
+      - Otherwise → create a new incident and return it
 
-def cluster_log_redis(project_id, source, environment, parsed_log, signature):
+    The Redis TTL-based cache is replaced by filtering on last_seen:
+      last_seen >= now - CLUSTER_WINDOW_MINUTES
+
+    Trade-off: one extra DB read per log line vs zero for the Redis cache hit.
+    Acceptable for a portfolio project — add Redis back if throughput requires it.
+    """
     from app.services.storage import Incident, SessionLocal
-
-    r = get_redis()
-    cache_key = f"cluster:{project_id}:{signature}"
-    ttl_seconds = int(CLUSTER_WINDOW_MINUTES * 60)
-    cached = r.get(cache_key)
 
     db = SessionLocal()
     try:
-        if cached:
-            incident = db.query(Incident).filter(Incident.id == cached).first()
-            if incident and incident.status == "open":
-                incident.count += 1
-                incident.last_seen = datetime.utcnow()
-                if len(incident.sample_lines or []) < MAX_SAMPLES:
-                    lines = list(incident.sample_lines or [])
-                    lines.append(parsed_log.raw)
-                    incident.sample_lines = lines
-                db.commit()
-                db.refresh(incident)
-                r.expire(cache_key, ttl_seconds)
-                return incident, False
+        window_start = datetime.utcnow() - timedelta(minutes=CLUSTER_WINDOW_MINUTES)
 
+        # Look for an open incident with this signature seen recently
+        incident = (
+            db.query(Incident)
+            .filter(
+                Incident.project_id == project_id,
+                Incident.signature == signature,
+                Incident.status == "open",
+                Incident.last_seen >= window_start,
+            )
+            .order_by(Incident.last_seen.desc())
+            .first()
+        )
+
+        if incident:
+            # Existing incident — bump count and append sample
+            incident.count += 1
+            incident.last_seen = datetime.utcnow()
+
+            if len(incident.sample_lines or []) < MAX_SAMPLES:
+                lines = list(incident.sample_lines or [])
+                lines.append(parsed_log.raw)
+                incident.sample_lines = lines
+
+            db.commit()
+            db.refresh(incident)
+            return incident, False
+
+        # New incident
         new_incident = Incident(
             project_id=project_id,
             source=source,
@@ -62,22 +86,18 @@ def cluster_log_redis(project_id, source, environment, parsed_log, signature):
         db.add(new_incident)
         db.commit()
         db.refresh(new_incident)
-        r.setex(cache_key, ttl_seconds, new_incident.id)
         return new_incident, True
 
     finally:
         db.close()
 
 
-def _fetch_recent_root_cause_candidates(project_id: str, new_incident_id: str) -> list:
-    """
-    Return open incidents from the past ROOT_CAUSE_LOOKBACK_MINUTES that:
-      - belong to this project
-      - are NOT the new incident itself
-      - have no root_cause_incident_id of their own (i.e. are root causes, not effects)
+# ---------------------------------------------------------------------------
+# Root cause chaining helpers — UNCHANGED
+# ---------------------------------------------------------------------------
 
-    These are the candidates the LLM will reason over.
-    """
+
+def _fetch_recent_root_cause_candidates(project_id: str, new_incident_id: str) -> list:
     from app.services.storage import Incident, SessionLocal
 
     cutoff = datetime.utcnow() - timedelta(minutes=ROOT_CAUSE_LOOKBACK_MINUTES)
@@ -95,7 +115,6 @@ def _fetch_recent_root_cause_candidates(project_id: str, new_incident_id: str) -
             .order_by(Incident.first_seen.asc())
             .all()
         )
-        # Detach from session so they can be used after db.close()
         for c in candidates:
             db.expunge(c)
         return candidates
@@ -106,7 +125,6 @@ def _fetch_recent_root_cause_candidates(project_id: str, new_incident_id: str) -
 def _apply_root_cause_chain(
     new_incident_id: str, cause_incident_id: str, explanation: str
 ):
-    """Persist the causal link onto the new incident record."""
     from app.services.storage import Incident, SessionLocal
 
     db = SessionLocal()
@@ -124,6 +142,11 @@ def _apply_root_cause_chain(
         db.rollback()
     finally:
         db.close()
+
+
+# ---------------------------------------------------------------------------
+# Analysis — UNCHANGED
+# ---------------------------------------------------------------------------
 
 
 def analyze_incident(incident, project_id: str, force: bool = False):
@@ -227,20 +250,18 @@ def analyze_incident(incident, project_id: str, force: bool = False):
         db.close()
 
 
-def run_root_cause_chaining(new_incident, project_id: str):
-    """
-    After a new incident is created and analyzed, look back at recent open
-    incidents and ask the LLM whether one of them caused this one.
+# ---------------------------------------------------------------------------
+# Root cause chaining — UNCHANGED
+# ---------------------------------------------------------------------------
 
-    This runs as a best-effort step — any failure is logged and swallowed
-    so it never blocks the main processing pipeline.
-    """
+
+def run_root_cause_chaining(new_incident, project_id: str):
     from app.core.decision_engine import get_decision_engine
 
     try:
         candidates = _fetch_recent_root_cause_candidates(project_id, new_incident.id)
         if not candidates:
-            return  # nothing to chain against
+            return
 
         print(
             f"[CHAIN] Checking root cause for incident {new_incident.id} "
@@ -260,11 +281,21 @@ def run_root_cause_chaining(new_incident, project_id: str):
             print(f"[CHAIN] No causal link found for incident {new_incident.id}")
 
     except Exception as e:
-        # Never let chaining errors break incident processing
         print(f"[CHAIN] run_root_cause_chaining failed for {new_incident.id}: {e}")
 
 
+# ---------------------------------------------------------------------------
+# Batch processor — UNCHANGED except cluster call
+# ---------------------------------------------------------------------------
+
+
 def process_log_batch(payload: dict):
+    """
+    Entry point called by loki_watcher.py for every poll batch.
+
+    Signature is identical to the original so loki_watcher can call it
+    the same way stream.py did.
+    """
     from app.core.parser import ParsedLog
     from app.core.signatures import generate_signature
     from app.services.storage import SessionLocal, Project
@@ -297,7 +328,9 @@ def process_log_batch(payload: dict):
                 continue
 
             sig = generate_signature(source, parsed)
-            incident, is_new = cluster_log_redis(
+
+            # DB-only clustering — Redis removed
+            incident, is_new = cluster_log_db(
                 project_id=project_id,
                 source=source,
                 environment=environment,
