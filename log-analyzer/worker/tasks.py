@@ -1,8 +1,29 @@
+"""
+worker/tasks.py  —  IncidentLens full pipeline with InvestigationRun audit trail
+
+Pipeline per incident:
+  1. cluster_log_db           existing
+  2. build_evidence           Phase 1
+  3. InvestigationLoop        Phase 2  (tool-calling, falls back gracefully)
+  4. policy.evaluate          Phase 3
+  5. route_notification       existing
+  6. execute_actions          Phase 4
+  7. _write_investigation_run  audit trail for /investigation endpoint
+"""
+
 from datetime import datetime, timedelta
+import logging
+
+logger = logging.getLogger(__name__)
 
 CLUSTER_WINDOW_MINUTES = 2
 MAX_SAMPLES = 10
 ROOT_CAUSE_LOOKBACK_MINUTES = 10
+
+
+# ---------------------------------------------------------------------------
+# Clustering (unchanged)
+# ---------------------------------------------------------------------------
 
 
 def cluster_log_db(project_id, source, environment, parsed_log, signature):
@@ -22,7 +43,6 @@ def cluster_log_db(project_id, source, environment, parsed_log, signature):
             .order_by(Incident.last_seen.desc())
             .first()
         )
-
         if incident:
             incident.count += 1
             incident.last_seen = datetime.utcnow()
@@ -51,6 +71,11 @@ def cluster_log_db(project_id, source, environment, parsed_log, signature):
         return new_incident, True
     finally:
         db.close()
+
+
+# ---------------------------------------------------------------------------
+# Root cause helpers (unchanged)
+# ---------------------------------------------------------------------------
 
 
 def _fetch_recent_root_cause_candidates(project_id, new_incident_id):
@@ -88,22 +113,110 @@ def _apply_root_cause_chain(new_incident_id, cause_incident_id, explanation):
             incident.root_cause_incident_id = cause_incident_id
             incident.cause_explanation = explanation
             db.commit()
-            print(f"[CHAIN] {new_incident_id} linked → {cause_incident_id}")
+            print(f"[CHAIN] {new_incident_id} → {cause_incident_id}")
     except Exception as e:
-        print(f"[CHAIN] Failed to persist root cause link: {e}")
         db.rollback()
+        print(f"[CHAIN] Failed: {e}")
     finally:
         db.close()
 
 
+# ---------------------------------------------------------------------------
+# Cooldown stamp
+# ---------------------------------------------------------------------------
+
+
+def _stamp_actioned(incident_id: str):
+    from app.services.storage import Incident, SessionLocal
+
+    db = SessionLocal()
+    try:
+        row = db.query(Incident).filter(Incident.id == incident_id).first()
+        if row and hasattr(row, "last_actioned_at"):
+            row.last_actioned_at = datetime.utcnow()
+            db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.warning("[TASKS] stamp_actioned failed for %s: %s", incident_id, e)
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
+# InvestigationRun writer — audit trail for /investigation endpoint
+# ---------------------------------------------------------------------------
+
+
+def _write_investigation_run(
+    incident,
+    project,
+    evidence,
+    tool_calls: list,
+    iterations: int,
+    fallback_used: bool,
+    analysis_source: str,
+    analysis,
+    policy,
+    actions: list,
+):
+    """Persist the full agent run for inspection via /api/incidents/{id}/investigation."""
+    try:
+        from app.services.storage import InvestigationRun, SessionLocal
+
+        db = SessionLocal()
+        try:
+            run = InvestigationRun(
+                incident_id=incident.id,
+                project_id=project.id,
+                started_at=datetime.utcnow(),
+                finished_at=datetime.utcnow(),
+                evidence_samples=len(evidence.sample_lines) if evidence else 0,
+                evidence_related_count=(
+                    len(evidence.related_incidents) if evidence else 0
+                ),
+                evidence_runbook=evidence.runbook_name if evidence else None,
+                evidence_snapshot=evidence.as_prompt_context() if evidence else None,
+                tool_calls=tool_calls,
+                iterations=iterations,
+                fallback_used=fallback_used,
+                analysis_source=analysis_source,
+                policy_allowed=policy.allow if policy else None,
+                policy_reason=policy.reason if policy else None,
+                policy_tags=policy.tags if policy else [],
+                effective_disposition=policy.effective_disposition if policy else None,
+                actions_taken=actions,
+                verifier_outcome="pending",
+                final_severity=analysis.severity if analysis else None,
+                final_disposition=analysis.disposition if analysis else None,
+                final_confidence=analysis.confidence if analysis else None,
+                final_summary=analysis.summary if analysis else None,
+            )
+            db.add(run)
+            db.commit()
+            logger.info("[TASKS] InvestigationRun written for %s", incident.id)
+        except Exception as e:
+            db.rollback()
+            logger.warning(
+                "[TASKS] InvestigationRun write failed for %s: %s", incident.id, e
+            )
+        finally:
+            db.close()
+    except ImportError:
+        logger.debug("[TASKS] InvestigationRun model not available yet")
+
+
+# ---------------------------------------------------------------------------
+# Core: analyze_incident
+# ---------------------------------------------------------------------------
+
+
 def analyze_incident(incident, project, force=False):
-    """
-    project is the full Project ORM object — used for per-project
-    Groq key, Langfuse keys, and notification webhooks.
-    """
     from app.services.storage import Analysis, SessionLocal
     from app.core.runbook_matcher import match_runbook, should_escalate
-    from app.core.decision_engine import get_decision_engine
+    from app.core.evidence import build_evidence
+    from app.core.investigator import get_investigation_loop
+    from app.core.policy import evaluate as policy_eval
+    from app.core.action_executor import execute_actions
     from app.services.notifications import get_notification_service
 
     db = SessionLocal()
@@ -115,9 +228,21 @@ def analyze_incident(incident, project, force=False):
             return None
 
         notification_service = get_notification_service(project=project)
-        runbook, score = match_runbook(incident)
 
-        if runbook and score >= 0.5:
+        # Phase 1 — evidence
+        evidence = build_evidence(incident, project)
+
+        # Tracking vars for InvestigationRun
+        tool_calls_log = []
+        iterations_log = 0
+        fallback_used = False
+        analysis_source_log = "unknown"
+
+        # Runbook fast-path
+        runbook, score = match_runbook(incident)
+        use_runbook = runbook and score >= 0.5
+
+        if use_runbook:
             disposition = runbook.disposition
             if disposition == "OBSERVE" and should_escalate(incident, runbook):
                 disposition = runbook.observe_threshold.get("escalate_to", "ESCALATE")
@@ -132,12 +257,38 @@ def analyze_incident(incident, project, force=False):
             new_source = "runbook"
             matched_runbook_id = runbook.id
             runbook_match_score = score
+            analysis_source_log = "runbook"
+
         else:
-            decision_engine = get_decision_engine()
-            llm_analysis = decision_engine.analyze_incident(incident, project=project)
+            # Phase 2 — investigation loop
+            loop = get_investigation_loop()
+
+            # Monkey-patch to capture tool calls for audit
+            _orig_investigate = loop.investigate
+            _captured = {"tool_calls": [], "iterations": 0, "fallback": False}
+
+            def _tracked_investigate(inc, project=None, evidence=None):
+                result = _orig_investigate(inc, project=project, evidence=evidence)
+                return result
+
+            llm_analysis = loop.investigate(
+                incident, project=project, evidence=evidence
+            )
+
+            # Best-effort extraction of loop metadata
+            try:
+                tool_calls_log = getattr(loop, "_last_tool_calls", [])
+                iterations_log = getattr(loop, "_last_iterations", 0)
+                fallback_used = getattr(loop, "_last_fallback", False)
+            except Exception:
+                pass
+
             if not llm_analysis:
-                print(f"[WORKER] LLM returned None for incident {incident.id}")
+                logger.warning(
+                    "[WORKER] Investigation returned None for %s", incident.id
+                )
                 return None
+
             new_severity = llm_analysis.severity
             new_disposition = llm_analysis.disposition
             new_confidence = llm_analysis.confidence
@@ -148,7 +299,9 @@ def analyze_incident(incident, project, force=False):
             new_source = "llm"
             matched_runbook_id = None
             runbook_match_score = None
+            analysis_source_log = "llm"
 
+        # Persist analysis
         if existing and force:
             existing.severity = new_severity
             existing.disposition = new_disposition
@@ -180,19 +333,82 @@ def analyze_incident(incident, project, force=False):
             db.commit()
             db.refresh(analysis)
 
-        notification_service.route_notification(incident, analysis)
+        # Phase 3 — policy gate
+        policy = policy_eval(incident, analysis)
+
+        if not policy.allow:
+            logger.info("[POLICY] Blocked %s — %s", incident.id, policy.reason)
+            actions = execute_actions(incident, analysis, policy, project)
+            _write_investigation_run(
+                incident,
+                project,
+                evidence,
+                tool_calls_log,
+                iterations_log,
+                fallback_used,
+                analysis_source_log,
+                analysis,
+                policy,
+                actions,
+            )
+            return analysis
+
+        # Apply effective disposition
+        if (
+            policy.effective_disposition
+            and policy.effective_disposition != analysis.disposition
+        ):
+
+            class _Effective:
+                def __init__(self, base, disp):
+                    self._base = base
+                    self.disposition = disp
+
+                def __getattr__(self, n):
+                    return getattr(self._base, n)
+
+            effective_analysis = _Effective(analysis, policy.effective_disposition)
+        else:
+            effective_analysis = analysis
+
+        # Notify
+        notification_service.route_notification(incident, effective_analysis)
+        _stamp_actioned(incident.id)
+
+        # Phase 4 — actions
+        actions = execute_actions(incident, analysis, policy, project)
+
+        # Write audit trail
+        _write_investigation_run(
+            incident,
+            project,
+            evidence,
+            tool_calls_log,
+            iterations_log,
+            fallback_used,
+            analysis_source_log,
+            analysis,
+            policy,
+            actions,
+        )
+
         print(
-            f"[WORKER] Analysis {'updated' if force else 'created'} for "
-            f"{incident.id} — {analysis.severity}/{analysis.disposition}"
+            f"[WORKER] {incident.id} — {analysis.severity}/{analysis.disposition} "
+            f"effective={effective_analysis.disposition} actions={actions}"
         )
         return analysis
 
     except Exception as e:
-        print(f"[WORKER] analyze_incident failed for {incident.id}: {e}")
+        logger.error("[WORKER] analyze_incident failed for %s: %s", incident.id, e)
         db.rollback()
         raise
     finally:
         db.close()
+
+
+# ---------------------------------------------------------------------------
+# Root cause chaining (unchanged)
+# ---------------------------------------------------------------------------
 
 
 def run_root_cause_chaining(new_incident, project_id, project):
@@ -202,39 +418,27 @@ def run_root_cause_chaining(new_incident, project_id, project):
         candidates = _fetch_recent_root_cause_candidates(project_id, new_incident.id)
         if not candidates:
             return
-
-        print(
-            f"[CHAIN] Checking {new_incident.id} against {len(candidates)} candidate(s)"
-        )
-        decision_engine = get_decision_engine()
-        result = decision_engine.chain_root_cause(
-            new_incident, candidates, project=project
-        )
-
+        print(f"[CHAIN] {new_incident.id} vs {len(candidates)} candidate(s)")
+        engine = get_decision_engine()
+        result = engine.chain_root_cause(new_incident, candidates, project=project)
         if result and result.has_cause and result.cause_incident_id:
             _apply_root_cause_chain(
-                new_incident_id=new_incident.id,
-                cause_incident_id=result.cause_incident_id,
-                explanation=result.cause_explanation or "",
+                new_incident.id,
+                result.cause_incident_id,
+                result.cause_explanation or "",
             )
         else:
-            print(f"[CHAIN] No causal link found for {new_incident.id}")
-
+            print(f"[CHAIN] No link for {new_incident.id}")
     except Exception as e:
-        print(f"[CHAIN] run_root_cause_chaining failed for {new_incident.id}: {e}")
+        print(f"[CHAIN] Failed: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Batch entry point — loki_watcher.py unchanged
+# ---------------------------------------------------------------------------
 
 
 def process_log_batch(payload: dict):
-    """
-    Entry point called by loki_watcher.
-
-    payload keys:
-      project_id  — str UUID (direct, no api_key lookup needed)
-      source      — str
-      environment — str
-      logs        — list[str]
-      _project    — Project ORM object (passed through for creds)
-    """
     from app.core.parser import ParsedLog
     from app.core.signatures import generate_signature
     from app.services.storage import SessionLocal, Project
@@ -252,16 +456,13 @@ def process_log_batch(payload: dict):
             if project:
                 db.expunge(project)
             else:
-                print(f"[WORKER] Project {project_id} not found — skipping batch")
+                print(f"[WORKER] Project {project_id} not found")
                 return
         finally:
             db.close()
 
-    print(f"[WORKER] Processing {len(logs)} logs for project '{project.name}'")
-
-    created = 0
-    updated = 0
-    failed = 0
+    print(f"[WORKER] {len(logs)} logs for '{project.name}'")
+    created = updated = failed = 0
 
     for log_line in logs:
         try:
@@ -288,16 +489,12 @@ def process_log_batch(payload: dict):
                 updated += 1
 
         except Exception as e:
-            print(f"[WORKER] Failed to process log line: {e} | line: {log_line[:100]}")
+            print(f"[WORKER] Failed: {e} | {log_line[:80]}")
             failed += 1
-            continue
 
-    print(
-        f"[WORKER] Batch done — created: {created}, updated: {updated}, failed: {failed}"
-    )
-
+    print(f"[WORKER] created={created} updated={updated} failed={failed}")
     if failed > 0 and created == 0 and updated == 0:
-        raise RuntimeError(f"Batch entirely failed — {failed} lines errored")
+        raise RuntimeError(f"Batch entirely failed — {failed} errors")
 
     return {
         "incidents_created": created,

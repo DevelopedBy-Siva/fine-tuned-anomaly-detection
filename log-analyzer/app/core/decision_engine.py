@@ -13,10 +13,6 @@ load_dotenv()
 
 
 def _make_langfuse(project=None):
-    """
-    Return a Langfuse client using project credentials if available,
-    falling back to env vars. Returns None if no keys are configured.
-    """
     try:
         from langfuse import Langfuse
 
@@ -29,10 +25,8 @@ def _make_langfuse(project=None):
         host = (project.langfuse_host if project else None) or os.getenv(
             "LANGFUSE_HOST", "https://cloud.langfuse.com"
         )
-
         if not public_key or not secret_key:
             return None
-
         return Langfuse(public_key=public_key, secret_key=secret_key, host=host)
     except ImportError:
         return None
@@ -58,13 +52,6 @@ class _NoOpSpan:
 
     def update(self, *a, **kw):
         return self
-
-
-def _trace(project=None, **metadata):
-    lf = _make_langfuse(project)
-    if lf:
-        return lf.trace(metadata=metadata)
-    return _NoOpTrace()
 
 
 class IncidentAnalysis(BaseModel):
@@ -150,7 +137,6 @@ def validate_analysis(analysis: IncidentAnalysis, incident) -> IncidentAnalysis:
 
 def _make_llm(project=None) -> Optional[ChatGroq]:
     key = (project.groq_api_key if project else None) or ""
-
     if not key:
         keys = [
             os.getenv(v, "").strip()
@@ -158,11 +144,9 @@ def _make_llm(project=None) -> Optional[ChatGroq]:
             if os.getenv(v, "").strip()
         ]
         key = random.choice(keys) if keys else ""
-
     if not key:
         print("[LLM] No Groq API key configured — LLM analysis disabled")
         return None
-
     return ChatGroq(model="llama-3.3-70b-versatile", temperature=0.3, api_key=key)
 
 
@@ -170,11 +154,27 @@ class DecisionEngine:
 
     def __init__(self):
         self.parser = PydanticOutputParser(pydantic_object=IncidentAnalysis)
+
         self.prompt = ChatPromptTemplate.from_messages(
             [
                 (
                     "system",
                     """You are an expert SRE analyzing production incidents.
+
+You will receive:
+1. Core incident metadata (source, environment, count, timestamps)
+2. An evidence bundle containing:
+   - Sample log lines from this incident
+   - Other open incidents currently firing in the same system
+   - A matched runbook with recommended steps (if found)
+   - A known root cause link (if already established)
+
+Use ALL of this evidence when deciding severity and disposition.
+Key reasoning rules:
+- If multiple related incidents are firing together, treat this as a potential cascade — raise severity
+- If a runbook matched with high score, bias toward its disposition and steps
+- If a root cause is already known, reflect that in the summary
+- If count is low (< 3) and no related incidents, prefer OBSERVE over ESCALATE
 
 Severity guidelines:
 - CRITICAL: Service down, data loss, OutOfMemoryError, heap space, segfaults, fatal errors
@@ -204,8 +204,9 @@ CRITICAL RULES:
 Source: {source} | Environment: {environment}
 Count: {count} | First seen: {first_seen} | Last seen: {last_seen}
 
-Sample logs:
-{sample_logs}
+--- EVIDENCE ---
+{evidence_context}
+--- END EVIDENCE ---
 
 {format_instructions}""",
                 ),
@@ -248,7 +249,21 @@ Was the new incident caused by one of the earlier incidents?
             ]
         )
 
-    def analyze_incident(self, incident, project=None) -> Optional[IncidentAnalysis]:
+    def analyze_incident(
+        self,
+        incident,
+        project=None,
+        evidence=None,
+    ) -> Optional[IncidentAnalysis]:
+        """
+        Analyze an incident using the LLM.
+
+        Args:
+            incident: Incident ORM object
+            project:  Project ORM object (for credentials)
+            evidence: EvidenceBundle from app.core.evidence.build_evidence()
+                      If None, falls back to incident.sample_lines[:3] (old behaviour)
+        """
         t0 = time.time()
         lf = _make_langfuse(project)
         trace = (
@@ -258,6 +273,7 @@ Was the new incident caused by one of the earlier incidents?
                     "incident_id": str(incident.id),
                     "source": incident.source,
                     "count": incident.count,
+                    "has_evidence_bundle": evidence is not None,
                 },
             )
             if lf
@@ -268,9 +284,13 @@ Was the new incident caused by one of the earlier incidents?
         if not llm:
             return None
 
-        sample_logs = (
-            "\n".join(incident.sample_lines[:3]) if incident.sample_lines else "N/A"
-        )
+        if evidence is not None:
+            evidence_context = evidence.as_prompt_context()
+        else:
+            sample_logs = (
+                "\n".join(incident.sample_lines[:3]) if incident.sample_lines else "N/A"
+            )
+            evidence_context = f"=== Sample log lines ===\n{sample_logs}"
 
         try:
             formatted = self.prompt.format_messages(
@@ -280,14 +300,14 @@ Was the new incident caused by one of the earlier incidents?
                 count=incident.count,
                 first_seen=incident.first_seen.strftime("%Y-%m-%d %H:%M:%S"),
                 last_seen=incident.last_seen.strftime("%Y-%m-%d %H:%M:%S"),
-                sample_logs=sample_logs,
+                evidence_context=evidence_context,
             )
 
             gen = trace.generation(
                 name="llm-analysis",
                 model="llama-3.3-70b-versatile",
                 model_parameters={"temperature": 0.3},
-                input=sample_logs,
+                input=evidence_context,
             )
 
             response = llm.invoke(formatted)
@@ -315,6 +335,9 @@ Was the new incident caused by one of the earlier incidents?
                     "disposition": analysis.disposition,
                     "latency_ms": elapsed_ms,
                     "analysis_source": "llm",
+                    "evidence_related_count": (
+                        len(evidence.related_incidents) if evidence else 0
+                    ),
                 }
             )
             return analysis

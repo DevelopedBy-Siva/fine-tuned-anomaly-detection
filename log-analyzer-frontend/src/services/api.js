@@ -2,7 +2,6 @@ import axios from "axios";
 
 export const API_BASE_URL =
   process.env.REACT_APP_API_URL || "http://localhost:8000";
-
 export const TEST_LOG_SERVER_URL =
   process.env.REACT_APP_TEST_LOG_SERVER_URL || "http://localhost:8001";
 
@@ -38,6 +37,10 @@ export const incidentsAPI = {
   get: (id) => api.get(`/api/incidents/${id}`),
   close: (id) => api.post(`/api/incidents/${id}/close`),
   ignore: (id) => api.post(`/api/incidents/${id}/ignore`),
+  // Agent visibility — new
+  getEvidence: (id) => api.get(`/api/incidents/${id}/evidence`),
+  getActions: (id) => api.get(`/api/incidents/${id}/actions`),
+  getInvestigation: (id) => api.get(`/api/incidents/${id}/investigation`),
 };
 
 export const isAuthenticated = () => !!localStorage.getItem("token");

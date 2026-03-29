@@ -56,3 +56,26 @@ def log_server_status(project: Project = Depends(get_current_project)):
         return resp.json()
     except requests.RequestException as e:
         raise HTTPException(status_code=502, detail=f"Log server unreachable: {e}")
+
+
+@router.post("/eval/ingest")
+def eval_ingest(
+    data: dict,
+    project: Project = Depends(get_current_project),
+):
+    if not project.is_test:
+        raise HTTPException(
+            status_code=403, detail="Eval ingest is only available for the demo project"
+        )
+    from worker.tasks import process_log_batch
+
+    result = process_log_batch(
+        {
+            "project_id": str(project.id),
+            "source": data.get("source", "eval"),
+            "environment": data.get("environment", "eval"),
+            "logs": data.get("logs", []),
+            "_project": project,
+        }
+    )
+    return result or {"incidents_created": 0, "incidents_updated": 0, "failed": 0}

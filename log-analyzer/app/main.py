@@ -1,9 +1,5 @@
 """
-app/main.py
-
-Change from original:
-  - start_worker() now imports from worker.loki_watcher instead of worker.stream
-  - Everything else — routes, middleware, lifespan, CORS — UNCHANGED
+app/main.py  —  IncidentLens
 """
 
 import os
@@ -17,6 +13,7 @@ from dotenv import load_dotenv
 from app.services.storage import init_db
 from app.services.cleanup import cleanup_all_data
 from app.api import routes_ingest, routes_incidents, routes_auth
+from app.api import routes_investigation  # ← new
 
 load_dotenv()
 
@@ -24,33 +21,42 @@ load_dotenv()
 def start_worker():
     import traceback
 
-    print("[MAIN] Starting Loki watcher thread...")
     try:
-        # ← Only change: stream → loki_watcher
         from worker.loki_watcher import run as run_worker
 
-        print("[MAIN] loki_watcher imported OK, starting poll loop...")
         run_worker()
     except Exception as e:
-        print(f"[MAIN] Loki watcher thread failed: {e}")
+        print(f"[MAIN] Loki watcher failed: {e}")
+        traceback.print_exc()
+
+
+def start_verifier():
+    import traceback
+
+    try:
+        from worker.verifier import run as run_verifier
+
+        run_verifier()
+    except Exception as e:
+        print(f"[MAIN] Verifier failed: {e}")
         traceback.print_exc()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("Starting Log Analyzer...")
+    print("Starting IncidentLens...")
     init_db()
     cleanup_all_data()
 
-    worker_thread = threading.Thread(target=start_worker, daemon=True)
-    worker_thread.start()
-    print("[MAIN] Loki watcher thread started")
+    threading.Thread(target=start_worker, daemon=True).start()
+    threading.Thread(target=start_verifier, daemon=True).start()
+    print("[MAIN] Worker + verifier threads started")
 
     yield
-    print("Shutting down...")
+    print("[MAIN] Shutting down")
 
 
-app = FastAPI(title="Log Analyzer", lifespan=lifespan)
+app = FastAPI(title="IncidentLens", version="1.0.0", lifespan=lifespan)
 
 cors_origins = os.getenv("CORS_ORIGINS", "")
 origins = [o.strip() for o in cors_origins.split(",") if o.strip()]
@@ -66,18 +72,19 @@ app.add_middleware(
 app.include_router(routes_auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(routes_ingest.router, prefix="/api", tags=["ingest"])
 app.include_router(routes_incidents.router, prefix="/api", tags=["incidents"])
+app.include_router(routes_investigation.router, prefix="/api", tags=["investigation"])
 
 
 @app.get("/")
 def root():
     return {
-        "service": "log-analyzer",
+        "service": "IncidentLens",
+        "version": "1.0.0",
         "status": "running",
-        "version": "2.0.0",
-        "frontend": origins,
+        "description": "Policy-bound autonomous observability agent",
     }
 
 
 @app.get("/health")
-def health_check():
+def health():
     return {"status": "healthy"}

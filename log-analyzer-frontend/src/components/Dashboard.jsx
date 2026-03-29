@@ -8,6 +8,8 @@ import {
   Play,
   Square,
   AlertCircle,
+  Zap,
+  Activity,
 } from "lucide-react";
 
 function useDebounce(value, delay) {
@@ -19,12 +21,69 @@ function useDebounce(value, delay) {
   return debounced;
 }
 
+const SCENARIOS = [
+  {
+    id: "db_cascade",
+    label: "DB Cascade",
+    description: "Pool exhaustion → payment timeout → NPE",
+    duration: "~105s",
+  },
+  {
+    id: "memory_leak",
+    label: "Memory Leak",
+    description: "Heap grows to OOM kill, pod restarts",
+    duration: "~185s",
+  },
+  {
+    id: "deployment_gone_wrong",
+    label: "Bad Deploy",
+    description: "Config change → pool halved → OOM",
+    duration: "~85s",
+  },
+  {
+    id: "auth_cascade",
+    label: "Auth Cascade",
+    description: "Redis down → JWT invalid → rate limit",
+    duration: "~75s",
+  },
+];
+
+function ScenarioButton({ scenario, onRun, running }) {
+  return (
+    <button
+      onClick={() => onRun(scenario.id)}
+      disabled={running === scenario.id}
+      className="flex flex-col items-start px-3 py-2.5 rounded-lg border border-gray-700 hover:border-sky-500/40 hover:bg-sky-500/5 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed group"
+    >
+      <div className="flex items-center gap-1.5 mb-0.5">
+        {running === scenario.id ? (
+          <Activity size={11} className="text-sky-400 animate-pulse" />
+        ) : (
+          <Zap
+            size={11}
+            className="text-gray-500 group-hover:text-sky-400 transition-colors"
+          />
+        )}
+        <span className="text-xs font-medium text-gray-300">
+          {scenario.label}
+        </span>
+        <span className="text-xs text-gray-600">{scenario.duration}</span>
+      </div>
+      <p className="text-xs text-gray-600 leading-tight">
+        {scenario.description}
+      </p>
+    </button>
+  );
+}
+
 function Dashboard() {
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isTest, setIsTest] = useState(false);
   const [logStatus, setLogStatus] = useState("unknown");
   const [logServerError, setLogServerError] = useState("");
+  const [runningScenario, setRunningScenario] = useState(null);
+  const [scenarioMsg, setScenarioMsg] = useState("");
   const [filters, setFilters] = useState({
     status: "open",
     severity: "",
@@ -55,6 +114,7 @@ function Dashboard() {
     setLoading(true);
     fetchIncidents(debouncedFilters);
   }, [debouncedFilters, fetchIncidents]);
+
   useEffect(() => {
     const t = setInterval(() => fetchIncidents(debouncedFilters), 5000);
     return () => clearInterval(t);
@@ -81,7 +141,6 @@ function Dashboard() {
 
   const handleStart = async () => {
     setLogServerError("");
-    setLogStatus("unknown");
     try {
       await logServerAPI.start();
       setLogStatus("running");
@@ -95,12 +154,27 @@ function Dashboard() {
 
   const handleStop = async () => {
     setLogServerError("");
-    setLogStatus("unknown");
     try {
       await logServerAPI.stop();
       setLogStatus("idle");
     } catch {
       setLogServerError("Failed to stop log server.");
+    }
+  };
+
+  const handleRunScenario = async (name) => {
+    setRunningScenario(name);
+    setScenarioMsg("");
+    try {
+      const res = await logServerAPI.runScenario(name);
+      const est = res.data?.estimated_duration_seconds;
+      setScenarioMsg(
+        `Scenario "${name}" started — ${res.data?.steps} log entries over ~${est}s. Watch incidents appear below.`,
+      );
+      setTimeout(() => setRunningScenario(null), (est || 120) * 1000);
+    } catch (err) {
+      setScenarioMsg(err.response?.data?.detail || "Failed to run scenario.");
+      setRunningScenario(null);
     }
   };
 
@@ -121,23 +195,30 @@ function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-black">
       <Navbar />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-16">
-        <h1 className="text-3xl font-medium text-white mb-8">
-          Incident Dashboard
-        </h1>
+        {/* Title */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-medium text-white">
+            Incident Dashboard
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            IncidentLens — policy-bound autonomous observability agent
+          </p>
+        </div>
 
+        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
           {[
-            { label: "Active Incidents", value: stats.total },
-            { label: "Total Events", value: stats.totalEvents },
-            { label: "High Frequency", value: stats.highFreq },
-            { label: "Analyzed", value: stats.analyzed },
+            { label: "Active incidents", value: stats.total },
+            { label: "Total events", value: stats.totalEvents },
+            { label: "High frequency", value: stats.highFreq },
+            { label: "Agent analyzed", value: stats.analyzed },
           ].map(({ label, value }) => (
             <div
               key={label}
-              className="rounded-lg border border-gray-800 py-6 px-5"
+              className="rounded-lg border border-gray-800 py-5 px-5"
             >
               <div className="text-3xl font-semibold text-white">{value}</div>
               <div className="text-xs text-gray-500 mt-1">{label}</div>
@@ -145,7 +226,8 @@ function Dashboard() {
           ))}
         </div>
 
-        <div className="rounded-lg border border-gray-800 p-5 mb-6">
+        {/* Controls */}
+        <div className="rounded-lg border border-gray-800 p-5 mb-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-xs text-gray-500 mb-1.5">
@@ -214,19 +296,18 @@ function Dashboard() {
                 className="text-sm bg-transparent w-full px-3 py-2 border border-gray-700 rounded-lg text-gray-400 placeholder:text-gray-600 focus:ring-1 focus:ring-sky-500"
               />
             </div>
-
             {isTest && (
               <div className="flex items-end gap-2">
                 <button
                   onClick={handleStart}
-                  disabled={logStatus === "unknown" || logStatus === "running"}
+                  disabled={logStatus === "running"}
                   className="flex-1 px-3 py-2 text-sm bg-sky-500 text-white rounded-lg flex items-center justify-center gap-1.5 hover:bg-sky-600 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
                 >
                   <Play size={13} /> Start
                 </button>
                 <button
                   onClick={handleStop}
-                  disabled={logStatus === "unknown" || logStatus === "idle"}
+                  disabled={logStatus !== "running"}
                   className="flex-1 px-3 py-2 text-sm bg-red-500 text-white rounded-lg flex items-center justify-center gap-1.5 hover:bg-red-600 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
                 >
                   <Square size={13} /> Stop
@@ -235,14 +316,37 @@ function Dashboard() {
             )}
           </div>
 
-          {isTest && logServerError && (
-            <div className="flex items-start gap-3 mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+          {/* Scenario buttons */}
+          {isTest && (
+            <div>
+              <p className="text-xs text-gray-500 mb-2">Demo scenarios</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {SCENARIOS.map((s) => (
+                  <ScenarioButton
+                    key={s.id}
+                    scenario={s}
+                    onRun={handleRunScenario}
+                    running={runningScenario}
+                  />
+                ))}
+              </div>
+              {scenarioMsg && (
+                <div className="mt-3 p-2.5 bg-sky-500/10 border border-sky-500/20 rounded-lg text-xs text-sky-300">
+                  {scenarioMsg}
+                </div>
+              )}
+            </div>
+          )}
+
+          {logServerError && (
+            <div className="flex items-start gap-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
               <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={15} />
               <p className="text-red-300 text-xs">{logServerError}</p>
             </div>
           )}
         </div>
 
+        {/* Incident list */}
         {loading ? (
           <div className="text-center py-12">
             <span className="loader" />
@@ -254,11 +358,11 @@ function Dashboard() {
             <p className="text-gray-500 text-sm">
               {filters.status || filters.severity || filters.ticket_title
                 ? "No incidents match your filters"
-                : "No incidents yet — logs will appear here as they are detected"}
+                : "No incidents yet — start the log server or run a scenario"}
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-5">
+          <div className="grid grid-cols-1 gap-4">
             {incidents.map((incident) => (
               <IncidentCard
                 key={incident.id}
