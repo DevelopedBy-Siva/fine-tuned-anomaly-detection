@@ -158,6 +158,7 @@ def _write_investigation_run(
     analysis,
     policy,
     actions: list,
+    started_at,
 ):
     """Persist the full agent run for inspection via /api/incidents/{id}/investigation."""
     try:
@@ -168,7 +169,7 @@ def _write_investigation_run(
             run = InvestigationRun(
                 incident_id=incident.id,
                 project_id=project.id,
-                started_at=datetime.utcnow(),
+                started_at=started_at,
                 finished_at=datetime.utcnow(),
                 evidence_samples=len(evidence.sample_lines) if evidence else 0,
                 evidence_related_count=(
@@ -221,6 +222,7 @@ def analyze_incident(incident, project, force=False):
 
     db = SessionLocal()
     try:
+        investigation_started_at = datetime.utcnow()
         existing = (
             db.query(Analysis).filter(Analysis.incident_id == incident.id).first()
         )
@@ -262,14 +264,6 @@ def analyze_incident(incident, project, force=False):
         else:
             # Phase 2 — investigation loop
             loop = get_investigation_loop()
-
-            # Monkey-patch to capture tool calls for audit
-            _orig_investigate = loop.investigate
-            _captured = {"tool_calls": [], "iterations": 0, "fallback": False}
-
-            def _tracked_investigate(inc, project=None, evidence=None):
-                result = _orig_investigate(inc, project=project, evidence=evidence)
-                return result
 
             llm_analysis = loop.investigate(
                 incident, project=project, evidence=evidence
@@ -350,6 +344,7 @@ def analyze_incident(incident, project, force=False):
                 analysis,
                 policy,
                 actions,
+                investigation_started_at,
             )
             return analysis
 
@@ -390,6 +385,7 @@ def analyze_incident(incident, project, force=False):
             analysis,
             policy,
             actions,
+            investigation_started_at,
         )
 
         print(

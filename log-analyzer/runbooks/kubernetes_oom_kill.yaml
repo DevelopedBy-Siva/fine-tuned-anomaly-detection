@@ -5,13 +5,11 @@ default_severity: critical
 disposition: ESCALATE
 patterns:
   - "oomkilled"
-  - "container"
   - "exceeded memory limit"
   - "killed by the kernel"
   - "api-server"
   - "worker-node"
   - "scheduler-pod"
-  - "orchestrator"
 steps:
   - "Identify the pod and check restart count: kubectl get pods --all-namespaces | grep -v Running"
   - "Get OOM details from pod events: kubectl describe pod <pod-name>"

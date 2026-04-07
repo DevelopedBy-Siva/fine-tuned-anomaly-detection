@@ -6,7 +6,7 @@ import os
 import random
 import time
 from collections import deque
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 
 import httpx
 from dotenv import load_dotenv
@@ -19,7 +19,6 @@ LOKI_URL = os.getenv("LOKI_URL", "")
 LOKI_USERNAME = os.getenv("LOKI_USERNAME", "")
 LOKI_API_KEY = os.getenv("LOKI_API_KEY", "")
 SERVICE_NAME = os.getenv("LOG_SERVICE_NAME", "log-server")
-print(LOKI_API_KEY)
 
 cors_origins = os.getenv("CORS_ORIGINS", "")
 origins = [o.strip() for o in cors_origins.split(",") if o.strip()]
@@ -107,7 +106,7 @@ class ErrorPatterns:
 
     @staticmethod
     def auth_token_expired():
-        return f"TokenExpiredError: JWT expired at {datetime.now(UTC).strftime('%H:%M:%S')} — user forced to re-login"
+        return f"TokenExpiredError: JWT expired at {datetime.now(timezone.utc).strftime('%H:%M:%S')} — user forced to re-login"
 
     @staticmethod
     def auth_invalid_signature():
@@ -454,28 +453,40 @@ SCENARIOS = {
 }
 
 
-async def _run_scenario(scenario_name: str):
+async def _run_scenario(scenario_name: str, repeat: int = 1, speed: float = 1.0):
     """Execute a scenario — push each step to Loki with controlled timing."""
     scenario = SCENARIOS[scenario_name]
     steps = scenario["steps"]
-    print(f"[SCENARIO] Starting '{scenario_name}' — {len(steps)} steps")
+    speed = max(speed, 0.01)
+    print(
+        f"[SCENARIO] Starting '{scenario_name}' — {len(steps)} steps x{repeat} at {speed:.2f}x"
+    )
 
-    for i, step in enumerate(steps):
-        delay = step["delay_seconds"]
-        if delay > 0:
-            print(f"[SCENARIO] Step {i+1}/{len(steps)} — waiting {delay}s")
-            await asyncio.sleep(delay)
+    for run_idx in range(repeat):
+        for i, step in enumerate(steps):
+            delay = step["delay_seconds"] / speed
+            if delay > 0:
+                print(
+                    f"[SCENARIO] Run {run_idx+1}/{repeat} step {i+1}/{len(steps)} — waiting {delay:.2f}s"
+                )
+                await asyncio.sleep(delay)
 
-        ts = datetime.now(UTC).isoformat()
-        level = step.get("level", "ERROR")
-        log_line = f"[{ts}] {level}: {step['log']}"
+            ts = datetime.now(timezone.utc).isoformat()
+            level = step.get("level", "ERROR")
+            log_line = f"[{ts}] {level}: {step['log']}"
 
-        success = await push_to_loki(
-            [log_line],
-            extra_labels={"scenario": scenario_name, "step": str(i + 1)},
-        )
-        status = "pushed" if success else "FAILED"
-        print(f"[SCENARIO] Step {i+1}/{len(steps)} {status}: {log_line[:80]}…")
+            success = await push_to_loki(
+                [log_line],
+                extra_labels={
+                    "scenario": scenario_name,
+                    "step": str(i + 1),
+                    "run": str(run_idx + 1),
+                },
+            )
+            status = "pushed" if success else "FAILED"
+            print(
+                f"[SCENARIO] Run {run_idx+1}/{repeat} step {i+1}/{len(steps)} {status}: {log_line[:80]}…"
+            )
 
     print(f"[SCENARIO] '{scenario_name}' complete")
 
@@ -525,15 +536,33 @@ class LogGenerator:
     def running(self) -> bool:
         return self._task is not None and not self._task.done()
 
-    async def start(self, duration: int = 300):
+    async def start(
+        self,
+        duration: int = 300,
+        interval_seconds: float = 3.0,
+        batch_size: int = 1,
+        error_rate: float = ERROR_RATE,
+        slow_rate: float = SLOW_REQUEST_RATE,
+    ):
         async with self._lock:
             if self.running:
                 return False, "Already running"
             self._stop_event.clear()
             self.stats = {k: 0 for k in self.stats}
             self.last_error = None
-            self._task = asyncio.create_task(self._run(duration))
-            print(f"[LOG-SERVER] Started — {duration}s → Loki")
+            self._task = asyncio.create_task(
+                self._run(
+                    duration=duration,
+                    interval_seconds=max(interval_seconds, 0.01),
+                    batch_size=max(1, batch_size),
+                    error_rate=min(max(error_rate, 0.0), 1.0),
+                    slow_rate=min(max(slow_rate, 0.0), 1.0),
+                )
+            )
+            print(
+                f"[LOG-SERVER] Started — {duration}s, interval={interval_seconds}s, "
+                f"batch_size={batch_size}, error_rate={error_rate:.2f}, slow_rate={slow_rate:.2f}"
+            )
             return True, "started"
 
     async def stop(self):
@@ -548,18 +577,30 @@ class LogGenerator:
         print("[LOG-SERVER] Stopped")
         return True, "stopped"
 
-    async def _run(self, duration: int = 300):
-        print(f"[LOG-SERVER] Running for {duration}s")
+    async def _run(
+        self,
+        duration: int = 300,
+        interval_seconds: float = 3.0,
+        batch_size: int = 1,
+        error_rate: float = ERROR_RATE,
+        slow_rate: float = SLOW_REQUEST_RATE,
+    ):
+        print(
+            f"[LOG-SERVER] Running for {duration}s at interval={interval_seconds}s "
+            f"batch_size={batch_size}"
+        )
         start_time = asyncio.get_event_loop().time()
         try:
             while not self._stop_event.is_set():
                 if asyncio.get_event_loop().time() - start_time >= duration:
                     break
-                self._generate_log()
+                self._generate_logs(batch_size, error_rate, slow_rate)
                 if self.log_buffer:
                     await self._flush_to_loki()
                 try:
-                    await asyncio.wait_for(self._stop_event.wait(), timeout=3.0)
+                    await asyncio.wait_for(
+                        self._stop_event.wait(), timeout=interval_seconds
+                    )
                 except asyncio.TimeoutError:
                     pass
 
@@ -570,28 +611,34 @@ class LogGenerator:
         except asyncio.CancelledError:
             print("[LOG-SERVER] Task cancelled")
 
-    def _generate_log(self):
-        self.stats["logs_generated"] += 1
-        rand = random.random()
-        if rand < ERROR_RATE:
-            self.logger.error(random.choice(ERROR_GENERATORS)())
-        elif rand < ERROR_RATE + SLOW_REQUEST_RATE:
-            svc = random.choice(["checkout", "search", "auth", "upload", "report"])
-            delay = random.uniform(2, 8)
-            self.logger.warning(
-                f"SlowRequestWarning: {svc} endpoint took {delay:.2f}s — SLA breach"
-            )
-        else:
-            endpoints = [
-                "GET /api/users/{} 200 12ms",
-                "POST /api/orders/{} 201 45ms",
-                "GET /api/products/{} 200 8ms",
-                "PUT /api/cart/{} 200 23ms",
-                "GET /health 200 1ms",
-            ]
-            self.logger.info(
-                random.choice(endpoints).format(random.randint(1000, 9999))
-            )
+    def _generate_logs(
+        self,
+        count: int,
+        error_rate: float = ERROR_RATE,
+        slow_rate: float = SLOW_REQUEST_RATE,
+    ):
+        for _ in range(count):
+            self.stats["logs_generated"] += 1
+            rand = random.random()
+            if rand < error_rate:
+                self.logger.error(random.choice(ERROR_GENERATORS)())
+            elif rand < error_rate + slow_rate:
+                svc = random.choice(["checkout", "search", "auth", "upload", "report"])
+                delay = random.uniform(2, 8)
+                self.logger.warning(
+                    f"SlowRequestWarning: {svc} endpoint took {delay:.2f}s — SLA breach"
+                )
+            else:
+                endpoints = [
+                    "GET /api/users/{} 200 12ms",
+                    "POST /api/orders/{} 201 45ms",
+                    "GET /api/products/{} 200 8ms",
+                    "PUT /api/cart/{} 200 23ms",
+                    "GET /health 200 1ms",
+                ]
+                self.logger.info(
+                    random.choice(endpoints).format(random.randint(1000, 9999))
+                )
 
     async def _flush_to_loki(self):
         if not self.log_buffer:
@@ -604,7 +651,7 @@ class LogGenerator:
         if success:
             self.stats["logs_shipped"] += len(logs)
             self.stats["batches_pushed"] += 1
-            self.last_push_at = datetime.now(UTC).isoformat()
+            self.last_push_at = datetime.now(timezone.utc).isoformat()
             print(f"[LOG-SERVER] Pushed {len(logs)} logs to Loki")
         else:
             self.stats["push_errors"] += 1
@@ -635,13 +682,29 @@ async def startup_event():
 
 
 @app.post("/api/start")
-async def start_generation(duration: int = 300):
-    ok, msg = await log_generator.start(duration=duration)
+async def start_generation(
+    duration: int = 300,
+    interval_seconds: float = 3.0,
+    batch_size: int = 1,
+    error_rate: float = ERROR_RATE,
+    slow_rate: float = SLOW_REQUEST_RATE,
+):
+    ok, msg = await log_generator.start(
+        duration=duration,
+        interval_seconds=interval_seconds,
+        batch_size=batch_size,
+        error_rate=error_rate,
+        slow_rate=slow_rate,
+    )
     return {
         "message": msg,
         "status": "running" if log_generator.running else "idle",
         "transport": "loki",
         "duration_seconds": duration,
+        "interval_seconds": interval_seconds,
+        "batch_size": batch_size,
+        "error_rate": error_rate,
+        "slow_rate": slow_rate,
     }
 
 
@@ -668,7 +731,7 @@ async def get_status():
 
 
 @app.post("/api/scenario/{scenario_name}")
-async def run_scenario(scenario_name: str):
+async def run_scenario(scenario_name: str, repeat: int = 1, speed: float = 1.0):
     """
     Fire a correlated error scenario against Loki.
     """
@@ -677,22 +740,57 @@ async def run_scenario(scenario_name: str):
             status_code=404,
             detail=f"Unknown scenario '{scenario_name}'. Available: {list(SCENARIOS.keys())}",
         )
+    if repeat < 1:
+        raise HTTPException(status_code=400, detail="repeat must be >= 1")
+    if speed <= 0:
+        raise HTTPException(status_code=400, detail="speed must be > 0")
 
-    asyncio.create_task(_run_scenario(scenario_name))
+    asyncio.create_task(_run_scenario(scenario_name, repeat=repeat, speed=speed))
 
     scenario = SCENARIOS[scenario_name]
     steps = scenario["steps"]
-    total_delay = sum(s["delay_seconds"] for s in steps)
+    total_delay = sum(s["delay_seconds"] for s in steps) * repeat / max(speed, 0.01)
     return {
         "scenario": scenario_name,
         "description": scenario["description"],
         "status": "started",
         "steps": len(steps),
+        "repeat": repeat,
+        "speed": speed,
         "estimated_duration_seconds": total_delay,
         "message": (
             f"Scenario '{scenario_name}' is running in the background. "
-            f"{len(steps)} log entries will be pushed to Loki over ~{total_delay}s."
+            f"{len(steps) * repeat} log entries will be pushed to Loki over ~{total_delay:.1f}s."
         ),
+    }
+
+
+@app.post("/api/burst")
+async def generate_burst(
+    count: int = 100,
+    error_rate: float = 1.0,
+    slow_rate: float = 0.0,
+):
+    """
+    Generate and push a burst of logs immediately.
+    Useful for throughput and clustering tests without waiting for the background loop.
+    """
+    if count < 1:
+        raise HTTPException(status_code=400, detail="count must be >= 1")
+    if error_rate < 0 or slow_rate < 0 or error_rate + slow_rate > 1:
+        raise HTTPException(
+            status_code=400,
+            detail="error_rate and slow_rate must be >= 0 and sum to <= 1",
+        )
+
+    log_generator._generate_logs(count, error_rate=error_rate, slow_rate=slow_rate)
+    await log_generator._flush_to_loki()
+    return {
+        "message": "burst_generated",
+        "count": count,
+        "error_rate": error_rate,
+        "slow_rate": slow_rate,
+        "stats": log_generator.stats,
     }
 
 

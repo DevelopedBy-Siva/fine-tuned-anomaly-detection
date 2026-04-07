@@ -1,0 +1,58 @@
+[
+  {
+    "id": "suppress-001",
+    "source": "auth-noise-a",
+    "expected_suppress": true,
+    "replay_after_suppress": false,
+    "logs": ["TokenExpiredError: JWT expired at 09:15:01 - user forced to re-login"]
+  },
+  {
+    "id": "suppress-002",
+    "source": "auth-noise-b",
+    "expected_suppress": true,
+    "replay_after_suppress": false,
+    "logs": ["TokenExpiredError: JWT expired at 10:45:22 - user forced to re-login"]
+  },
+  {
+    "id": "suppress-003",
+    "source": "auth-noise-c",
+    "expected_suppress": true,
+    "replay_after_suppress": true,
+    "logs": ["TokenExpiredError: JWT expired at 11:05:11 - user forced to re-login"]
+  },
+  {
+    "id": "suppress-004",
+    "source": "auth-noise-d",
+    "expected_suppress": true,
+    "replay_after_suppress": false,
+    "logs": ["TokenExpiredError: JWT expired at 13:01:44 - user forced to re-login"]
+  },
+  {
+    "id": "suppress-005",
+    "source": "auth-noise-e",
+    "expected_suppress": true,
+    "replay_after_suppress": true,
+    "logs": ["TokenExpiredError: JWT expired at 14:19:05 - user forced to re-login"]
+  },
+  {
+    "id": "suppress-006",
+    "source": "db-timeout",
+    "expected_suppress": false,
+    "replay_after_suppress": false,
+    "logs": ["DatabaseConnectionError: Connection timeout after 30s to db-primary-1:5432"]
+  },
+  {
+    "id": "suppress-007",
+    "source": "payment-timeout",
+    "expected_suppress": false,
+    "replay_after_suppress": false,
+    "logs": ["PaymentGatewayTimeout: Stripe did not respond within 10s - transaction aborted"]
+  },
+  {
+    "id": "suppress-008",
+    "source": "oom",
+    "expected_suppress": false,
+    "replay_after_suppress": false,
+    "logs": ["OutOfMemoryError: Java heap space exhausted (2041MB/2048MB) - GC overhead limit exceeded"]
+  }
+]

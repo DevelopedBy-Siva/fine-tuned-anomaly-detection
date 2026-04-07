@@ -6,10 +6,8 @@ disposition: NEEDS_ONCALL
 patterns:
   - "shardfailureexception"
   - "primary shard"
-  - "shard"
   - "elasticsearch"
   - "search results degraded"
-  - "index"
   - "unavailable"
 steps:
   - "Check Elasticsearch cluster health — run GET /_cluster/health and look for red/yellow status"

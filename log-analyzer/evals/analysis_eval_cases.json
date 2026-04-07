@@ -1,0 +1,242 @@
+[
+  {
+    "id":"analysis-001",
+    "source":"checkout-api",
+    "environment":"prod",
+    "expected_root_cause":"database connection pool exhaustion",
+    "acceptable_keywords":["connection pool","db pool","database pool","pool exhaustion"],
+    "logs":[
+      "ConnectionPoolExhaustedError: All 20 connections in use - request queued for >30s",
+      "PaymentGatewayTimeout: Stripe did not respond within 10s - no DB connection available to log transaction",
+      "NullPointerException: Unexpected null reference in PaymentController.process() at line 187 - response object was null after gateway timeout"
+    ]
+  },
+  {
+    "id":"analysis-002",
+    "source":"billing-worker",
+    "environment":"prod",
+    "expected_root_cause":"memory leak or heap exhaustion",
+    "acceptable_keywords":["memory leak","heap","outofmemory","oom"],
+    "logs":[
+      "MemoryPressureWarning: Heap at 94% - GC overhead critical, response times degraded",
+      "OutOfMemoryError: Java heap space exhausted (2041MB/2048MB) - GC overhead limit exceeded",
+      "OOMKilled: Container api-server-7d9f exceeded memory limit and was killed by the kernel"
+    ]
+  },
+  {
+    "id":"analysis-003",
+    "source":"auth-service",
+    "environment":"prod",
+    "expected_root_cause":"redis session store outage",
+    "acceptable_keywords":["redis","session store","session cache"],
+    "logs":[
+      "SessionStoreError: Redis session store unreachable - falling back to stateless mode",
+      "InvalidSignatureError: JWT signature verification failed - session store unavailable, token cannot be re-validated",
+      "RateLimitExceeded: Too many login attempts from 192.168.1.47 - rate limiter state lost, replaying from zero"
+    ]
+  },
+  {
+    "id":"analysis-004",
+    "source":"integrations-worker",
+    "environment":"prod",
+    "expected_root_cause":"upstream api schema change",
+    "acceptable_keywords":["schema","api response","upstream api","response shape"],
+    "logs":[
+      "SchemaMismatchError: Salesforce API response shape changed - expected field missing in response",
+      "UnhandledException: IllegalStateException propagated to global handler - sync job aborted",
+      "RetryBudgetExceeded: downstream retries exhausted after schema mismatch"
+    ]
+  },
+  {
+    "id":"analysis-005",
+    "source":"uploads-api",
+    "environment":"prod",
+    "expected_root_cause":"object storage or s3 write failure",
+    "acceptable_keywords":["s3","object storage","storage write","upload storage"],
+    "logs":[
+      "FileUploadError: Failed to write .pdf to object storage - S3 returned 500",
+      "FileUploadError: Failed to write .csv to object storage - S3 returned 500",
+      "SupportAlert: customer uploads failing across regions"
+    ]
+  },
+  {
+    "id":"analysis-006",
+    "source":"checkout-api",
+    "environment":"prod",
+    "expected_root_cause":"payment gateway timeout",
+    "acceptable_keywords":["payment gateway","stripe","gateway timeout","payment provider"],
+    "logs":[
+      "PaymentGatewayTimeout: Stripe did not respond within 10s - transaction aborted",
+      "PaymentGatewayTimeout: Stripe did not respond within 15s - duplicate retries suppressed",
+      "CheckoutError: payment authorization could not complete"
+    ]
+  },
+  {
+    "id":"analysis-007",
+    "source":"notifications-worker",
+    "environment":"prod",
+    "expected_root_cause":"message queue backlog",
+    "acceptable_keywords":["queue","consumer lag","backlog","queue depth"],
+    "logs":[
+      "QueueDepthCritical: email-queue has 88000 pending messages - consumer lag growing",
+      "QueueDepthCritical: sms-queue has 91000 pending messages - consumer lag growing",
+      "DeliveryDelayWarning: outbound notifications delayed beyond SLA"
+    ]
+  },
+  {
+    "id":"analysis-008",
+    "source":"search-api",
+    "environment":"prod",
+    "expected_root_cause":"elasticsearch shard failure",
+    "acceptable_keywords":["shard","elasticsearch","search index"],
+    "logs":[
+      "ShardFailureException: Primary shard for index 'products-v3' unavailable - search results degraded",
+      "SearchTimeout: product search exceeded 5s timeout",
+      "SearchDegraded: partial result sets served from cache"
+    ]
+  },
+  {
+    "id":"analysis-009",
+    "source":"edge-gateway",
+    "environment":"prod",
+    "expected_root_cause":"cdn origin failures",
+    "acceptable_keywords":["cdn","origin","origin pull","stale cache"],
+    "logs":[
+      "CDNOriginError: Origin pull failed for /static/js/main.chunk.js - 502 from origin, serving stale cache",
+      "CDNOriginError: Origin pull failed for /static/css/app.css - 502 from origin, serving stale cache",
+      "FrontendAlert: asset fetch success rate dropped below 95%"
+    ]
+  },
+  {
+    "id":"analysis-010",
+    "source":"feature-flags",
+    "environment":"prod",
+    "expected_root_cause":"feature flag service timeout",
+    "acceptable_keywords":["feature flag","flag service","flag evaluation"],
+    "logs":[
+      "FeatureFlagTimeout: Failed to evaluate flag 'checkout-v2' - defaulting to off, service unreachable",
+      "FeatureFlagTimeout: Failed to evaluate flag 'new-pricing-engine' - defaulting to off, service unreachable",
+      "DegradedExperience: rollout rules bypassed due to flag service outage"
+    ]
+  },
+  {
+    "id":"analysis-011",
+    "source":"checkout-api",
+    "environment":"prod",
+    "expected_root_cause":"database timeout",
+    "acceptable_keywords":["database","db timeout","connection timeout","database connection"],
+    "logs":[
+      "DatabaseConnectionError: Connection timeout after 30s to db-primary-1:5432",
+      "DatabaseConnectionError: Connection timeout after 30s to db-replica-2:5432",
+      "OrderCreateFailed: could not persist checkout transaction"
+    ]
+  },
+  {
+    "id":"analysis-012",
+    "source":"security-edge",
+    "environment":"prod",
+    "expected_root_cause":"brute force attack",
+    "acceptable_keywords":["brute force","attack","credential stuffing","failed attempts"],
+    "logs":[
+      "BruteForceDetected: 320 failed attempts on /api/login in 60s",
+      "RateLimitExceeded: Too many login attempts from 10.0.3.18 - blocked for 15 minutes",
+      "SecurityAlert: login anomaly threshold exceeded"
+    ]
+  },
+  {
+    "id":"analysis-013",
+    "source":"frontend-sessions",
+    "environment":"prod",
+    "expected_root_cause":"websocket instability",
+    "acceptable_keywords":["websocket","connection dropped","transport close","ping timeout"],
+    "logs":[
+      "WebSocketError: Connection dropped for user 12888 - reason: ping timeout",
+      "WebSocketError: Connection dropped for user 23888 - reason: transport close",
+      "RealtimePresenceWarning: active sessions desynchronized"
+    ]
+  },
+  {
+    "id":"analysis-014",
+    "source":"shipping-api",
+    "environment":"prod",
+    "expected_root_cause":"grpc deadline exceeded",
+    "acceptable_keywords":["grpc","deadline exceeded","inventory-grpc","shipping-grpc"],
+    "logs":[
+      "DeadlineExceeded: gRPC call to inventory-grpc timed out after 5000ms - context cancelled by client",
+      "DeadlineExceeded: gRPC call to shipping-grpc timed out after 5000ms - context cancelled by client",
+      "CheckoutSLAExceeded: quote generation took longer than 6s"
+    ]
+  },
+  {
+    "id":"analysis-015",
+    "source":"scheduler",
+    "environment":"prod",
+    "expected_root_cause":"disk space exhaustion",
+    "acceptable_keywords":["disk space","disk full","mount","write operations may fail"],
+    "logs":[
+      "DiskSpaceCritical: /var/lib/postgresql is 98% full - write operations may fail",
+      "DiskSpaceCritical: /data is 95% full - replica snapshots deferred",
+      "WriteFailure: background compaction paused due to insufficient disk"
+    ]
+  },
+  {
+    "id":"analysis-016",
+    "source":"profile-api",
+    "environment":"prod",
+    "expected_root_cause":"null pointer bug",
+    "acceptable_keywords":["null pointer","null reference","npe"],
+    "logs":[
+      "NullPointerException: Unexpected null reference in UserService.getProfile() at line 144",
+      "UnhandledException: IllegalStateException propagated to global handler - request returned 500",
+      "ProfileRenderFailed: user details endpoint unavailable"
+    ]
+  },
+  {
+    "id":"analysis-017",
+    "source":"imports-worker",
+    "environment":"prod",
+    "expected_root_cause":"csv parse failure",
+    "acceptable_keywords":["csv","malformed row","parse error","column count"],
+    "logs":[
+      "CSVParseError: Malformed row at line 381 - unexpected column count",
+      "CSVParseError: Malformed row at line 402 - unexpected column count",
+      "ImportAborted: source file rejected during validation"
+    ]
+  },
+  {
+    "id":"analysis-018",
+    "source":"search-cache",
+    "environment":"prod",
+    "expected_root_cause":"cache stampede",
+    "acceptable_keywords":["cache stampede","cache miss storm","cache miss","simultaneous db queries"],
+    "logs":[
+      "CacheStampedeDetected: Cache miss storm on key 'product-catalog' - 320 simultaneous DB queries",
+      "DatabaseConnectionError: Connection timeout after 30s to db-analytics-3:5432",
+      "SearchLatencyP95High: response times exceeded 4s"
+    ]
+  },
+  {
+    "id":"analysis-019",
+    "source":"risk-engine",
+    "environment":"prod",
+    "expected_root_cause":"fraud detection event",
+    "acceptable_keywords":["fraud","risk engine","transaction flagged"],
+    "logs":[
+      "FraudDetectionAlert: Transaction flagged by risk engine - score exceeded threshold",
+      "PaymentReviewQueued: transaction requires manual review",
+      "CustomerNoticeQueued: verification email scheduled"
+    ]
+  },
+  {
+    "id":"analysis-020",
+    "source":"api-gateway",
+    "environment":"prod",
+    "expected_root_cause":"service unavailable dependency",
+    "acceptable_keywords":["service unavailable","503","dependency outage","circuit breaker"],
+    "logs":[
+      "ServiceUnavailableError: recommendation-engine returned 503 after 3 retries - circuit breaker opened",
+      "ServiceUnavailableError: analytics-pipeline returned 503 after 3 retries - circuit breaker opened",
+      "GatewayFallbackEnabled: degraded homepage payload served"
+    ]
+  }
+]

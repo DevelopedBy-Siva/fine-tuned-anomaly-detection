@@ -4,10 +4,10 @@ description: Queue depth growing — consumer lag indicates processing bottlenec
 default_severity: high
 disposition: NEEDS_ONCALL
 patterns:
-  - "qdepthcritical"
+  - "queuedepthcritical"
   - "pending messages"
   - "consumer lag growing"
-  - "queue.*full"
+  - "regex:queue.*full"
   - "message queue full"
 steps:
   - "Check consumer process health — may be crashed or throttled"

@@ -7,7 +7,7 @@ patterns:
   - "validationerror"
   - "failed schema validation"
   - "data rejected"
-  - "field.*failed"
+  - "regex:field.*failed"
 steps:
   - "Check if a client app change is sending malformed data"
   - "Review validation rules — may be too strict for valid inputs"

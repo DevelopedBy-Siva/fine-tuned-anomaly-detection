@@ -4,8 +4,8 @@ description: S3 or object storage returning errors on file write
 default_severity: medium
 disposition: NEEDS_DEV
 patterns:
-  - "fileuploadeerror"
-  - "failed to write.*to object storage"
+  - "fileuploaderror"
+  - "regex:failed to write.*to object storage"
   - "s3 returned 500"
   - "object storage"
   - "file upload failed"

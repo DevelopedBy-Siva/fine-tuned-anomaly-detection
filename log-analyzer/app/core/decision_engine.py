@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
+
 
 def _make_langfuse(project=None):
     try:
@@ -54,6 +56,48 @@ class _NoOpSpan:
         return self
 
 
+def _langfuse_usage_payload(response) -> Optional[dict]:
+    usage = getattr(response, "usage_metadata", None) or {}
+    input_tokens = usage.get("input_tokens", 0)
+    output_tokens = usage.get("output_tokens", 0)
+    total_tokens = usage.get("total_tokens", input_tokens + output_tokens)
+
+    if not input_tokens and not output_tokens and not total_tokens:
+        return None
+
+    return {
+        "input": input_tokens,
+        "output": output_tokens,
+        "total": total_tokens,
+        "unit": "TOKENS",
+    }
+
+
+def _configured_groq_models() -> list[str]:
+    primary = os.getenv("GROQ_MODEL", "").strip()
+    fallbacks_raw = os.getenv("GROQ_MODEL_FALLBACKS", "").strip()
+    fallbacks = [m.strip() for m in fallbacks_raw.split(",") if m.strip()]
+
+    models = []
+    if primary:
+        models.append(primary)
+    models.append(DEFAULT_GROQ_MODEL)
+    models.extend(fallbacks)
+
+    deduped = []
+    seen = set()
+    for model in models:
+        if model not in seen:
+            deduped.append(model)
+            seen.add(model)
+    return deduped
+
+
+def _is_rate_limit_error(error: Exception) -> bool:
+    text = str(error).lower()
+    return "429" in text or "rate limit" in text or "rate_limit_exceeded" in text
+
+
 class IncidentAnalysis(BaseModel):
     severity: str = Field(description="Severity level: low, medium, high, or critical")
     disposition: str = Field(
@@ -61,6 +105,10 @@ class IncidentAnalysis(BaseModel):
     )
     confidence: float = Field(description="Confidence score between 0.0 and 1.0")
     summary: str = Field(description="2-3 sentence summary of the issue")
+    suspected_root_cause: Optional[str] = Field(
+        default=None,
+        description="Short suspected root cause statement, or null if unclear",
+    )
     next_steps: list[str] = Field(description="3-5 concrete action items")
     ticket_title: str = Field(description="Concise ticket title (max 100 chars)")
     ticket_body: str = Field(description="Detailed ticket description for developers")
@@ -126,6 +174,8 @@ def validate_analysis(analysis: IncidentAnalysis, incident) -> IncidentAnalysis:
         analysis.severity = "high"
 
     analysis.confidence = max(0.0, min(1.0, analysis.confidence))
+    if analysis.suspected_root_cause is not None:
+        analysis.suspected_root_cause = analysis.suspected_root_cause.strip() or None
 
     if not analysis.ticket_title or not analysis.ticket_title.strip():
         analysis.ticket_title = f"{incident.source} - {incident.signature[:50]}"
@@ -135,7 +185,7 @@ def validate_analysis(analysis: IncidentAnalysis, incident) -> IncidentAnalysis:
     return analysis
 
 
-def _make_llm(project=None) -> Optional[ChatGroq]:
+def _make_llm(project=None, model_name: Optional[str] = None) -> Optional[ChatGroq]:
     key = (project.groq_api_key if project else None) or ""
     if not key:
         keys = [
@@ -147,8 +197,9 @@ def _make_llm(project=None) -> Optional[ChatGroq]:
     if not key:
         print("[LLM] No Groq API key configured — LLM analysis disabled")
         return None
-    return ChatGroq(model="llama-3.3-70b-versatile", temperature=0.3, api_key=key)
-
+    return ChatGroq(
+        model=model_name or DEFAULT_GROQ_MODEL, temperature=0.3, api_key=key
+    )
 
 class DecisionEngine:
 
@@ -280,10 +331,6 @@ Was the new incident caused by one of the earlier incidents?
             else _NoOpTrace()
         )
 
-        llm = _make_llm(project)
-        if not llm:
-            return None
-
         if evidence is not None:
             evidence_context = evidence.as_prompt_context()
         else:
@@ -292,69 +339,73 @@ Was the new incident caused by one of the earlier incidents?
             )
             evidence_context = f"=== Sample log lines ===\n{sample_logs}"
 
-        try:
-            formatted = self.prompt.format_messages(
-                format_instructions=self.parser.get_format_instructions(),
-                source=incident.source,
-                environment=incident.environment,
-                count=incident.count,
-                first_seen=incident.first_seen.strftime("%Y-%m-%d %H:%M:%S"),
-                last_seen=incident.last_seen.strftime("%Y-%m-%d %H:%M:%S"),
-                evidence_context=evidence_context,
-            )
+        formatted = self.prompt.format_messages(
+            format_instructions=self.parser.get_format_instructions(),
+            source=incident.source,
+            environment=incident.environment,
+            count=incident.count,
+            first_seen=incident.first_seen.strftime("%Y-%m-%d %H:%M:%S"),
+            last_seen=incident.last_seen.strftime("%Y-%m-%d %H:%M:%S"),
+            evidence_context=evidence_context,
+        )
 
-            gen = trace.generation(
-                name="llm-analysis",
-                model="llama-3.3-70b-versatile",
-                model_parameters={"temperature": 0.3},
-                input=evidence_context,
-            )
-
-            response = llm.invoke(formatted)
-            elapsed_ms = int((time.time() - t0) * 1000)
-
-            usage = getattr(response, "usage_metadata", None)
-            gen.end(
-                output=response.content,
-                usage=(
-                    {
-                        "input": usage.get("input_tokens", 0),
-                        "output": usage.get("output_tokens", 0),
-                    }
-                    if usage
-                    else {}
-                ),
-            )
-
-            analysis = self.parser.parse(response.content)
-            analysis = validate_analysis(analysis, incident)
-
-            trace.update(
-                metadata={
-                    "severity": analysis.severity,
-                    "disposition": analysis.disposition,
-                    "latency_ms": elapsed_ms,
-                    "analysis_source": "llm",
-                    "evidence_related_count": (
-                        len(evidence.related_incidents) if evidence else 0
-                    ),
-                }
-            )
-            return analysis
-
-        except Exception as e:
-            trace.update(metadata={"error": str(e)})
-            print(f"[LLM] analyze_incident failed: {e}")
+        models = _configured_groq_models()
+        if not models:
             return None
+
+        last_error = None
+        for model_name in models:
+            llm = _make_llm(project, model_name=model_name)
+            if not llm:
+                return None
+            try:
+                gen = trace.generation(
+                    name="llm-analysis",
+                    model=model_name,
+                    model_parameters={"temperature": 0.3},
+                    input=evidence_context,
+                )
+
+                response = llm.invoke(formatted)
+                elapsed_ms = int((time.time() - t0) * 1000)
+
+                usage_payload = _langfuse_usage_payload(response)
+                if usage_payload is None:
+                    gen.end(output=response.content)
+                else:
+                    gen.end(output=response.content, usage=usage_payload)
+
+                analysis = self.parser.parse(response.content)
+                analysis = validate_analysis(analysis, incident)
+
+                trace.update(
+                    metadata={
+                        "severity": analysis.severity,
+                        "disposition": analysis.disposition,
+                        "latency_ms": elapsed_ms,
+                        "analysis_source": "llm",
+                        "model": model_name,
+                        "evidence_related_count": (
+                            len(evidence.related_incidents) if evidence else 0
+                        ),
+                    }
+                )
+                return analysis
+            except Exception as e:
+                last_error = e
+                if _is_rate_limit_error(e) and model_name != models[-1]:
+                    print(f"[LLM] Model {model_name} rate-limited — trying fallback")
+                    continue
+                break
+
+        trace.update(metadata={"error": str(last_error) if last_error else "unknown"})
+        print(f"[LLM] analyze_incident failed: {last_error}")
+        return None
 
     def chain_root_cause(
         self, new_incident, earlier_incidents, project=None
     ) -> Optional[RootCauseResult]:
         if not earlier_incidents:
-            return None
-
-        llm = _make_llm(project)
-        if not llm:
             return None
 
         lf = _make_langfuse(project)
@@ -379,44 +430,55 @@ Was the new incident caused by one of the earlier incidents?
                 f"  Signature: {inc.signature}\n  Sample: {sample}"
             )
 
-        try:
-            formatted = self.root_cause_prompt.format_messages(
-                format_instructions=self.root_cause_parser.get_format_instructions(),
-                new_id=new_incident.id,
-                new_source=new_incident.source,
-                new_environment=new_incident.environment,
-                new_first_seen=new_incident.first_seen.strftime("%Y-%m-%d %H:%M:%S"),
-                new_signature=new_incident.signature,
-                new_sample_logs="\n".join((new_incident.sample_lines or [])[:3])
-                or "N/A",
-                earlier_incidents="\n\n".join(earlier_blocks),
-            )
+        formatted = self.root_cause_prompt.format_messages(
+            format_instructions=self.root_cause_parser.get_format_instructions(),
+            new_id=new_incident.id,
+            new_source=new_incident.source,
+            new_environment=new_incident.environment,
+            new_first_seen=new_incident.first_seen.strftime("%Y-%m-%d %H:%M:%S"),
+            new_signature=new_incident.signature,
+            new_sample_logs="\n".join((new_incident.sample_lines or [])[:3]) or "N/A",
+            earlier_incidents="\n\n".join(earlier_blocks),
+        )
 
-            gen = trace.generation(
-                name="root-cause-llm", model="llama-3.3-70b-versatile"
-            )
-            response = llm.invoke(formatted)
-            gen.end(output=response.content)
-
-            result = self.root_cause_parser.parse(response.content)
-            valid_ids = {inc.id for inc in earlier_incidents}
-            if result.has_cause and result.cause_incident_id not in valid_ids:
-                print(f"[CHAIN] LLM returned invalid cause_incident_id — discarding")
-                return None
-
-            trace.update(
-                metadata={
-                    "has_cause": result.has_cause,
-                    "confidence": result.confidence,
-                }
-            )
-            return result
-
-        except Exception as e:
-            trace.update(metadata={"error": str(e)})
-            print(f"[CHAIN] chain_root_cause failed: {e}")
+        models = _configured_groq_models()
+        if not models:
             return None
 
+        last_error = None
+        for model_name in models:
+            llm = _make_llm(project, model_name=model_name)
+            if not llm:
+                return None
+            try:
+                gen = trace.generation(name="root-cause-llm", model=model_name)
+                response = llm.invoke(formatted)
+                gen.end(output=response.content)
+
+                result = self.root_cause_parser.parse(response.content)
+                valid_ids = {inc.id for inc in earlier_incidents}
+                if result.has_cause and result.cause_incident_id not in valid_ids:
+                    print(f"[CHAIN] LLM returned invalid cause_incident_id — discarding")
+                    return None
+
+                trace.update(
+                    metadata={
+                        "has_cause": result.has_cause,
+                        "confidence": result.confidence,
+                        "model": model_name,
+                    }
+                )
+                return result
+            except Exception as e:
+                last_error = e
+                if _is_rate_limit_error(e) and model_name != models[-1]:
+                    print(f"[CHAIN] Model {model_name} rate-limited — trying fallback")
+                    continue
+                break
+
+        trace.update(metadata={"error": str(last_error) if last_error else "unknown"})
+        print(f"[CHAIN] chain_root_cause failed: {last_error}")
+        return None
 
 _decision_engine: Optional[DecisionEngine] = None
 

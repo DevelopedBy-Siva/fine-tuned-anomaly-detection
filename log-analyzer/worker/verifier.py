@@ -64,11 +64,17 @@ def _sweep():
 
 
 def _verify_one(log_entry, db):
-    from app.services.storage import Incident, Analysis, Project, SessionLocal
+    from app.services.storage import Incident
 
     incident = db.query(Incident).filter(Incident.id == log_entry.incident_id).first()
     if not incident:
         log_entry.outcome = "incident_not_found"
+        _update_investigation_verifier_state(
+            incident_id=log_entry.incident_id,
+            outcome=log_entry.outcome,
+            checked_at=datetime.utcnow(),
+            db=db,
+        )
         return
 
     count_at_action = _estimate_count_at_action(log_entry, incident)
@@ -95,6 +101,12 @@ def _verify_one(log_entry, db):
         )
         _maybe_reescalate(incident, log_entry)
 
+    _update_investigation_verifier_state(
+        incident_id=incident.id,
+        outcome=log_entry.outcome,
+        checked_at=datetime.utcnow(),
+        db=db,
+    )
     _maybe_tune_runbook(incident, log_entry, went_quiet, db)
 
 
@@ -170,3 +182,19 @@ def _maybe_tune_runbook(incident, log_entry, went_quiet: bool, db):
             incident.id,
             incident.count,
         )
+
+
+def _update_investigation_verifier_state(incident_id: str, outcome: str, checked_at, db):
+    from app.services.storage import InvestigationRun
+
+    run = (
+        db.query(InvestigationRun)
+        .filter(InvestigationRun.incident_id == incident_id)
+        .order_by(InvestigationRun.started_at.desc())
+        .first()
+    )
+    if not run:
+        return
+
+    run.verifier_outcome = outcome
+    run.verifier_checked_at = checked_at

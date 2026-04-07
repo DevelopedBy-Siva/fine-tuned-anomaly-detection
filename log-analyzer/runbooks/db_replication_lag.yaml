@@ -5,7 +5,7 @@ default_severity: medium
 disposition: OBSERVE
 patterns:
   - "replicationlagwarning"
-  - "replica is.*behind primary"
+  - "regex:replica is.*behind primary"
   - "read consistency degraded"
 steps:
   - "Check replica server load — may be under-provisioned"

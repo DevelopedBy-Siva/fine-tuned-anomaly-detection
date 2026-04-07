@@ -8,7 +8,7 @@ patterns:
   - "redis connection failed"
   - "redis timeout"
   - "redis readonly"
-  - "connection refused.*6379"
+  - "regex:connection refused.*6379"
 
 steps:
   - "Check Redis server status and connectivity"

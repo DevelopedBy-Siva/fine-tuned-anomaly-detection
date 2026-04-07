@@ -1,4 +1,5 @@
 import os
+import logging
 import requests
 import smtplib
 from email.mime.text import MIMEText
@@ -8,24 +9,27 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+
 
 class NotificationService:
     """Send notifications to Discord and Email based on disposition"""
 
     def __init__(self, project=None):
-        self.discord_escalate_url = project.discord_webhook_escalate
-        self.discord_dev_url = project.discord_webhook_dev
+        self.discord_escalate_url = project.discord_webhook_escalate if project else None
+        self.discord_dev_url = project.discord_webhook_dev if project else None
 
         self.smtp_host = os.getenv("SMTP_HOST")
         self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
         self.smtp_user = os.getenv("SMTP_USER")
         self.smtp_password = os.getenv("SMTP_PASSWORD")
-        self.oncall_email = project.user_email
+        self.oncall_email = project.user_email if project else None
+        self.dashboard_url = os.getenv("DASHBOARD_URL", "http://localhost:3000")
 
     def send_discord(self, webhook_url: str, incident, analysis) -> bool:
         """Send formatted message to Discord"""
         if not webhook_url:
-            print(f"Discord webhook not configured")
+            logger.info("Discord webhook not configured")
             return False
 
         color_map = {
@@ -107,13 +111,13 @@ class NotificationService:
         try:
             response = requests.post(webhook_url, json=payload, timeout=10)
             if response.status_code == 204:
-                print(f"Discord notification sent")
+                logger.info("Discord notification sent")
                 return True
             else:
-                print(f"Discord failed: {response.status_code}")
+                logger.warning("Discord failed: %s", response.status_code)
                 return False
         except Exception as e:
-            print(f"Discord error: {e}")
+            logger.warning("Discord error: %s", e)
             return False
 
     def send_email(self, incident, analysis) -> bool:
@@ -121,7 +125,7 @@ class NotificationService:
         if not all(
             [self.smtp_host, self.smtp_user, self.smtp_password, self.oncall_email]
         ):
-            print("Email not configured")
+            logger.info("Email not configured")
             return False
 
         try:
@@ -150,7 +154,7 @@ Next Steps:
 
 ---
 Incident ID: {incident.id}
-Dashboard: http://localhost:8000/api/dashboard
+Dashboard: {self.dashboard_url}
             """
 
             html = f"""
@@ -196,7 +200,7 @@ Dashboard: http://localhost:8000/api/dashboard
     <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
     <p style="color: #666; font-size: 12px;">
         Incident ID: {incident.id}<br>
-        <a href="http://localhost:8000/api/dashboard">View Dashboard</a>
+        <a href="{self.dashboard_url}">View Dashboard</a>
     </p>
 </body>
 </html>
@@ -210,11 +214,11 @@ Dashboard: http://localhost:8000/api/dashboard
                 server.login(self.smtp_user, self.smtp_password)
                 server.send_message(msg)
 
-            print(f"Email sent to {self.oncall_email}")
+            logger.info("Email sent to %s", self.oncall_email)
             return True
 
         except Exception as e:
-            print(f"Email error: {e}")
+            logger.warning("Email error: %s", e)
             return False
 
     def route_notification(self, incident, analysis) -> bool:
@@ -231,7 +235,7 @@ Dashboard: http://localhost:8000/api/dashboard
             return self.send_discord(self.discord_dev_url, incident, analysis)
 
         else:
-            print(f"ℹNo notification for {disposition}")
+            logger.info("No notification for %s", disposition)
             return False
 
 

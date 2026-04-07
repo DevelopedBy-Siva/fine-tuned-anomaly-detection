@@ -7,7 +7,7 @@ disposition: ESCALATE
 patterns:
   - "outofmemoryerror"
   - "java heap space"
-  - "heap.*max.*mb"
+  - "regex:heap.*max.*mb"
 
 steps:
   - "IMMEDIATE: Restart affected service instances"

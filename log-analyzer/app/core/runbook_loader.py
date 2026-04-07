@@ -2,7 +2,7 @@ import yaml
 from pathlib import Path
 from typing import List, Dict, Optional
 
-RUNBOOKS_DIR = Path("runbooks")
+RUNBOOKS_DIR = Path(__file__).resolve().parents[2] / "runbooks"
 
 
 class Runbook:

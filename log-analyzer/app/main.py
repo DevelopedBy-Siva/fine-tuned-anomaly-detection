@@ -18,6 +18,11 @@ from app.api import routes_investigation  # ← new
 load_dotenv()
 
 
+def _should_reset_data_on_startup() -> bool:
+    value = os.getenv("RESET_DATA_ON_STARTUP", "").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
 def start_worker():
     import traceback
 
@@ -46,7 +51,9 @@ def start_verifier():
 async def lifespan(app: FastAPI):
     print("Starting IncidentLens...")
     init_db()
-    cleanup_all_data()
+    if _should_reset_data_on_startup():
+        cleanup_all_data()
+        print("[MAIN] RESET_DATA_ON_STARTUP enabled — cleared incident-processing data")
 
     threading.Thread(target=start_worker, daemon=True).start()
     threading.Thread(target=start_verifier, daemon=True).start()

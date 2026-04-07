@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 MAX_ITERATIONS = 4
 TOOL_LOG_LINES = 20
 TOOL_INCIDENT_LIMIT = 8
+DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
 
 
 TOOLS = [
@@ -252,6 +253,7 @@ CRITICAL: After your investigation, you MUST output a JSON object (no markdown, 
   "disposition": "NO_ACTION|OBSERVE|NEEDS_DEV|NEEDS_ONCALL|ESCALATE",
   "confidence": 0.0-1.0,
   "summary": "2-3 sentence summary",
+  "suspected_root_cause": "short explanation of the most likely underlying cause, or null",
   "next_steps": ["step1", "step2", "step3"],
   "ticket_title": "concise title under 100 chars",
   "ticket_body": "detailed description for developers"
@@ -302,7 +304,32 @@ def _make_llm_client(project=None):
     if not key:
         return None, None
 
-    return Groq(api_key=key), "llama-3.3-70b-versatile"
+    return Groq(api_key=key), _configured_groq_models()
+
+
+def _configured_groq_models() -> list[str]:
+    primary = os.getenv("GROQ_MODEL", "").strip()
+    fallbacks_raw = os.getenv("GROQ_MODEL_FALLBACKS", "").strip()
+    fallbacks = [m.strip() for m in fallbacks_raw.split(",") if m.strip()]
+
+    models = []
+    if primary:
+        models.append(primary)
+    models.append(DEFAULT_GROQ_MODEL)
+    models.extend(fallbacks)
+
+    deduped = []
+    seen = set()
+    for model in models:
+        if model not in seen:
+            deduped.append(model)
+            seen.add(model)
+    return deduped
+
+
+def _is_rate_limit_error(error: Exception) -> bool:
+    text = str(error).lower()
+    return "429" in text or "rate limit" in text or "rate_limit_exceeded" in text
 
 
 class InvestigationLoop:
@@ -325,14 +352,18 @@ class InvestigationLoop:
         )
 
         t0 = time.time()
+        self._last_tool_calls = []
+        self._last_iterations = 0
+        self._last_fallback = False
         lf = self._make_langfuse(project)
         trace = self._start_trace(lf, incident)
 
-        client, model = _make_llm_client(project)
+        client, models = _make_llm_client(project)
         if not client:
             logger.info(
                 "[INVESTIGATOR] No Groq client — falling back to decision_engine"
             )
+            self._last_fallback = True
             return self._fallback(incident, project, evidence)
 
         executor = ToolExecutor(incident, project)
@@ -366,16 +397,34 @@ class InvestigationLoop:
 
         try:
             for iteration in range(MAX_ITERATIONS + 1):
+                self._last_iterations = iteration
                 span = self._start_span(trace, f"iteration-{iteration}", messages)
 
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    tools=TOOLS if iteration < MAX_ITERATIONS else None,
-                    tool_choice="auto" if iteration < MAX_ITERATIONS else None,
-                    temperature=0.2,
-                    max_tokens=1500,
-                )
+                response = None
+                last_error = None
+                for model_name in models:
+                    try:
+                        response = client.chat.completions.create(
+                            model=model_name,
+                            messages=messages,
+                            tools=TOOLS if iteration < MAX_ITERATIONS else None,
+                            tool_choice="auto" if iteration < MAX_ITERATIONS else None,
+                            temperature=0.2,
+                            max_tokens=1500,
+                        )
+                        break
+                    except Exception as e:
+                        last_error = e
+                        if _is_rate_limit_error(e) and model_name != models[-1]:
+                            logger.warning(
+                                "[INVESTIGATOR] Model %s rate-limited — trying fallback",
+                                model_name,
+                            )
+                            continue
+                        raise
+
+                if response is None and last_error:
+                    raise last_error
 
                 msg = response.choices[0].message
                 self._end_span(span, msg)
@@ -436,12 +485,16 @@ class InvestigationLoop:
                         }
                     )
 
+                self._last_tool_calls = list(tool_calls_made)
+
             if not final_text:
                 logger.warning("[INVESTIGATOR] No final text after loop — falling back")
+                self._last_fallback = True
                 return self._fallback(incident, project, evidence)
 
             analysis = self._parse_final(final_text, incident)
             if not analysis:
+                self._last_fallback = True
                 return self._fallback(incident, project, evidence)
 
             elapsed_ms = int((time.time() - t0) * 1000)
@@ -459,6 +512,8 @@ class InvestigationLoop:
         except Exception as e:
             logger.error("[INVESTIGATOR] Loop failed: %s — falling back", e)
             self._update_trace(trace, None, tool_calls_made, 0, error=str(e))
+            self._last_tool_calls = list(tool_calls_made)
+            self._last_fallback = True
             return self._fallback(incident, project, evidence)
 
     def _fallback(self, incident, project, evidence):
@@ -488,6 +543,7 @@ class InvestigationLoop:
                 disposition=data.get("disposition", "OBSERVE"),
                 confidence=float(data.get("confidence", 0.6)),
                 summary=data.get("summary", ""),
+                suspected_root_cause=data.get("suspected_root_cause"),
                 next_steps=data.get("next_steps", []),
                 ticket_title=data.get("ticket_title", "")[:100],
                 ticket_body=data.get("ticket_body", ""),

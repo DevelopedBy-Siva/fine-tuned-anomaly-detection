@@ -3,11 +3,7 @@ from typing import Optional, Tuple
 from app.core.runbook_loader import Runbook, get_runbooks
 
 
-def score_runbook(runbook: Runbook, incident_text: str) -> float:
-    """
-    Score how well a runbook matches an incident.
-    Returns a score between 0.0 and 1.0
-    """
+def _match_count(runbook: Runbook, incident_text: str) -> int:
     incident_lower = incident_text.lower()
     matches = 0
 
@@ -20,9 +16,18 @@ def score_runbook(runbook: Runbook, incident_text: str) -> float:
             if pattern.lower() in incident_lower:
                 matches += 1
 
+    return matches
+
+
+def score_runbook(runbook: Runbook, incident_text: str) -> float:
+    """
+    Score how well a runbook matches an incident.
+    Returns a score between 0.0 and 1.0
+    """
     if not runbook.patterns:
         return 0.0
 
+    matches = _match_count(runbook, incident_text)
     score = matches / len(runbook.patterns)
     return score
 
@@ -41,15 +46,19 @@ def match_runbook(incident) -> Tuple[Optional[Runbook], float]:
 
     sample_text = " ".join(incident.sample_lines or [])
 
-    scored_runbooks = [
-        (runbook, score_runbook(runbook, sample_text)) for runbook in runbooks
-    ]
+    scored_runbooks = []
+    for runbook in runbooks:
+        matches = _match_count(runbook, sample_text)
+        score = matches / len(runbook.patterns) if runbook.patterns else 0.0
+        scored_runbooks.append((runbook, score, matches))
 
-    scored_runbooks.sort(key=lambda x: x[1], reverse=True)
+    scored_runbooks.sort(key=lambda x: (x[1], x[2]), reverse=True)
 
-    best_runbook, best_score = scored_runbooks[0]
+    best_runbook, best_score, best_matches = scored_runbooks[0]
 
-    if best_score < 0.3:
+    if best_matches == 0:
+        return None, 0.0
+    if best_score < 0.3 and best_matches < 2:
         return None, 0.0
 
     return best_runbook, best_score
