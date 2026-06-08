@@ -15,19 +15,21 @@ Modern services produce too many logs for manual triage, but letting an LLM act 
 
 This makes the system useful as an engineering project, not just an AI demo.
 
-## Measured Results
+## Metrics
 
-These are the metrics worth keeping:
+IncidentLens keeps the evaluation story intentionally focused:
 
-- `95.0%` root-cause accuracy on a manually labeled 20-case incident eval set
-- `78.9%` runbook hit rate on analyzed incidents
-- `1.05s` median investigation latency
-- `4.84s` P95 agent runtime
-- `88.7%` verifier resolution rate
-- `115.3 logs/sec` clustering-only throughput on synthetic benchmark traffic
-- `100.0%` suppression precision with `0.0%` suppression false positives on an 8-case suppression eval set
+- Correct triage rate: correct severity, disposition, and root cause or matched runbook across all eval cases.
+- Unsafe automation rate: suppressed, under-triaged, or misrouted incidents that required action.
 
-The full LLM-heavy pipeline is intentionally not presented as a throughput strength. In practice, the fast path is deterministic routing plus bounded investigation for only the incidents that need it.
+These two numbers are the project signal. Other operational measurements can stay internal, but they are not the core claim.
+
+Current eval result:
+
+- `30/30` correct triage (`100.0%`) on a labeled incident eval set
+- `0/30` unsafe automation decisions (`0.0%`)
+- Hybrid path coverage: `28` deterministic runbook cases and `2` `llm-agent` long-tail cases
+- Agent behavior observed: `6` tool calls across the long-tail cases
 
 ## Architecture
 
@@ -100,7 +102,7 @@ This is the core design choice of the project: use AI for analysis, not uncontro
 - Post-action verification loop instead of treating model output as final truth
 - Hybrid incident routing: deterministic runbooks for common cases, LLM reasoning for long-tail incidents
 - Root-cause chaining across temporally related incidents
-- End-to-end measurement harness for clustering quality, reasoning quality, suppression behavior, and latency
+- A focused labeled eval for triage quality and automation safety
 
 ## Example Scenarios
 
@@ -115,27 +117,26 @@ This is the core design choice of the project: use AI for analysis, not uncontro
 
 These scenarios exist to exercise clustering, runbook routing, cascade detection, verification, and auditability under repeatable conditions.
 
-## Evaluation and Benchmarking
+## Evaluation
 
-Use the built-in scripts to reproduce the main metrics:
+Use the built-in script to reproduce the two main metrics:
 
 ```bash
-# Live metrics from a project in the database
-python log-analyzer/scripts/metrics_report.py live --project <project-name>
+python log-analyzer/scripts/metrics_report.py triage-eval
 
-# LLM root-cause eval
-python log-analyzer/scripts/metrics_report.py analysis-eval --project <project-name>
-
-# One-command wrapper
-./log-analyzer/scripts/run_resume_evals.sh <project-name>
 ```
 
-The eval harness includes:
+The eval dataset is `log-analyzer/evals/incident_triage_cases.json`. Each case defines logs plus the expected severity, disposition, and either a matched runbook or root-cause keywords. The output also reports `analysis paths`, so it is clear how many cases used deterministic runbooks versus the LLM agent.
 
-- labeled clustering cases
-- labeled root-cause cases
-- suppression/noise-policy cases
-- cluster-only and full-pipeline benchmarks
+Example output:
+
+```text
+cases scored: 30
+analysis paths: llm-agent=2, runbook=28
+agent tool calls: 6
+correct triage rate: 30/30 (100.0%)
+unsafe automation rate: 0/30 (0.0%)
+```
 
 ## Screenshots
 

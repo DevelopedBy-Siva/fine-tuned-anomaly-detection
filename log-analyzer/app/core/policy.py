@@ -46,6 +46,9 @@ def _rank(disposition: str) -> int:
 
 def _floor_disposition(severity: str, proposed: str) -> str:
     """Ensure disposition is at least the floor for this severity."""
+    if severity.lower() == "low" and proposed == "NO_ACTION":
+        return proposed
+
     floor = SEVERITY_DISPOSITION_FLOOR.get(severity.lower(), "OBSERVE")
     if _rank(proposed) < _rank(floor):
         return floor
@@ -117,7 +120,11 @@ def evaluate(incident, analysis) -> PolicyDecision:
             tags=tags,
         )
 
-    if disposition == "ESCALATE" and incident.count < MIN_COUNT_TO_ESCALATE:
+    if (
+        disposition == "ESCALATE"
+        and severity != "critical"
+        and incident.count < MIN_COUNT_TO_ESCALATE
+    ):
         tags.append("downgraded:count_too_low")
         disposition = "NEEDS_DEV"
         logger.info(
