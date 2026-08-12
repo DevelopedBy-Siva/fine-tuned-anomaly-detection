@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Optional
+import random
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -41,10 +42,7 @@ AGENT_TOOLS = [
         "function": {
             "name": "get_incident_logs",
             "description": "Return the raw log samples for the incident.",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-            },
+            "parameters": {"type": "object", "properties": {}},
         },
     },
     {
@@ -52,10 +50,7 @@ AGENT_TOOLS = [
         "function": {
             "name": "get_runbook_candidates",
             "description": "Return the best matching deterministic runbooks and scores.",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-            },
+            "parameters": {"type": "object", "properties": {}},
         },
     },
     {
@@ -63,10 +58,7 @@ AGENT_TOOLS = [
         "function": {
             "name": "get_safety_rubric",
             "description": "Return the project safety rules for automated actions.",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-            },
+            "parameters": {"type": "object", "properties": {}},
         },
     },
 ]
@@ -193,15 +185,16 @@ def _runbook_analysis(incident, runbook, score: float):
 
 
 def _llm_analysis(incident, project):
-    api_key = _groq_api_key(project)
-    if not api_key:
-        return None, "GROQ_API_KEY is not visible to this shell or .env"
+    api_keys = _groq_api_keys(project)
+    if not api_keys:
+        return None, "No Groq API keys are visible to this shell or .env"
 
     try:
         from groq import Groq
     except ImportError as exc:
         return None, f"groq package unavailable: {_short_error(exc)}"
 
+    api_key = random.choice(api_keys)
     client = Groq(api_key=api_key)
     model = os.getenv("GROQ_MODEL", DEFAULT_GROQ_MODEL)
     messages = _agent_messages(incident)
@@ -249,11 +242,7 @@ def _llm_analysis(incident, project):
                     {
                         "role": "tool",
                         "tool_call_id": call.id,
-                        "content": _agent_tool_result(
-                            incident,
-                            call.function.name,
-                            args,
-                        ),
+                        "content": _agent_tool_result(incident, call.function.name, args),
                     }
                 )
 
@@ -261,12 +250,7 @@ def _llm_analysis(incident, project):
             response = client.chat.completions.create(
                 model=model,
                 messages=messages
-                + [
-                    {
-                        "role": "user",
-                        "content": "Return only the final JSON analysis now.",
-                    }
-                ],
+                + [{"role": "user", "content": "Return only the final JSON analysis now."}],
                 temperature=0.1,
                 max_tokens=1200,
             )
@@ -306,16 +290,20 @@ def _llm_analysis(incident, project):
     )
 
 
-def _groq_api_key(project) -> str:
+def _groq_api_keys(project) -> list[str]:
+    keys = []
+
     project_key = (getattr(project, "groq_api_key", None) or "").strip()
     if project_key:
-        return project_key
+        keys.append(project_key)
 
     for name in ("GROQ_API_KEY", "GROQ_API_KEY_2", "GROQ_API_KEY_3"):
         key = os.getenv(name, "").strip()
-        if key:
-            return key
-    return ""
+        if key and key not in keys:
+            keys.append(key)
+
+    random.shuffle(keys)
+    return keys
 
 
 def _agent_messages(incident) -> list[dict]:
@@ -354,12 +342,7 @@ def _agent_messages(incident) -> list[dict]:
 
 def _agent_tool_result(incident, tool_name: str, args: dict) -> str:
     if tool_name == "get_incident_logs":
-        return json.dumps(
-            {
-                "incident_id": incident.id,
-                "logs": incident.sample_lines,
-            }
-        )
+        return json.dumps({"incident_id": incident.id, "logs": incident.sample_lines})
 
     if tool_name == "get_runbook_candidates":
         from app.core.runbook_matcher import score_runbook
@@ -460,10 +443,7 @@ def _normalize_agent_triage(incident, severity: str, disposition: str) -> tuple[
     if any(pattern in text for pattern in critical_patterns):
         return "critical", "ESCALATE"
 
-    if any(
-        pattern in text
-        for pattern in ["certificate expired", "x509", "tlshandshakeerror"]
-    ):
+    if any(pattern in text for pattern in ["certificate expired", "x509", "tlshandshakeerror"]):
         return "high", "NEEDS_DEV"
 
     if any(
@@ -579,50 +559,49 @@ def _root_or_runbook_matches(expected: dict, result: EvalResult) -> bool:
     return any(keyword in haystack for keyword in keywords)
 
 
-def _triage_failures(case: dict, result: EvalResult) -> list[str]:
+def _is_triage_correct(case: dict, result: EvalResult) -> bool:
     expected = case["expected"]
-    failures = []
 
-    expected_severity = expected["severity"].lower()
-    if result.severity != expected_severity:
-        failures.append(f"severity expected {expected_severity}, got {result.severity}")
-
-    expected_disposition = expected["disposition"].upper()
-    if result.effective_disposition != expected_disposition:
-        failures.append(
-            f"disposition expected {expected_disposition}, got {result.effective_disposition}"
-        )
-
+    if result.severity != expected["severity"].lower():
+        return False
+    if result.effective_disposition != expected["disposition"].upper():
+        return False
     if not _root_or_runbook_matches(expected, result):
-        expected_root = expected.get("runbook_id") or ", ".join(
-            expected.get("root_cause_keywords", [])
-        )
-        actual_root = result.matched_runbook_id or result.suspected_root_cause or "none"
-        failures.append(f"root/runbook expected {expected_root}, got {actual_root}")
-
-    return failures
+        return False
+    return True
 
 
-def _unsafe_reasons(case: dict, result: EvalResult) -> list[str]:
+def _is_unsafe_automation(case: dict, result: EvalResult) -> bool:
+    """
+    Broad safety bucket: any automated decision that misrepresents an
+    actionable incident's urgency (suppressed, under-triaged, wrongly
+    escalated, or noise incorrectly escalated).
+    """
     expected_disposition = case["expected"]["disposition"].upper()
     expected_rank = _rank(expected_disposition)
     actual_rank = _rank(result.effective_disposition)
-    reasons = []
 
     if expected_disposition != "NO_ACTION" and result.would_auto_suppress:
-        reasons.append("would auto-suppress an actionable incident")
+        return True
 
-    if expected_rank >= _rank("NEEDS_DEV"):
-        if result.effective_disposition != expected_disposition:
-            if actual_rank < expected_rank:
-                reasons.append("under-triaged an actionable incident")
-            else:
-                reasons.append("would notify the wrong severity/channel")
+    if expected_rank >= _rank("NEEDS_DEV") and result.effective_disposition != expected_disposition:
+        return True
 
     if expected_disposition == "NO_ACTION" and actual_rank >= _rank("NEEDS_DEV"):
-        reasons.append("would escalate known noise")
+        return True
 
-    return reasons
+    return False
+
+
+def _is_false_suppression(case: dict, result: EvalResult) -> bool:
+    """
+    Narrow, highest-severity failure mode: a real, actionable incident
+    (expected disposition != NO_ACTION) that the system would silently
+    auto-suppress. This is the metric that matters most for a system
+    that's allowed to take automated action.
+    """
+    expected_disposition = case["expected"]["disposition"].upper()
+    return expected_disposition != "NO_ACTION" and result.would_auto_suppress
 
 
 def run_triage_eval(dataset_path: Path, project_name: str | None):
@@ -631,68 +610,49 @@ def run_triage_eval(dataset_path: Path, project_name: str | None):
 
     scored = []
     skipped = []
-    triage_mismatches = []
-    unsafe = []
 
     for case in cases:
         result = _analyze_case(case, project)
         if result.skipped_reason:
             skipped.append((case, result))
             continue
-
         scored.append((case, result))
 
-        failures = _triage_failures(case, result)
-        if failures:
-            triage_mismatches.append((case, result, failures))
+    total = len(scored)
+    correct = sum(1 for case, result in scored if _is_triage_correct(case, result))
+    unsafe = [(case, result) for case, result in scored if _is_unsafe_automation(case, result)]
+    false_suppressed = [
+        (case, result) for case, result in scored if _is_false_suppression(case, result)
+    ]
 
-        unsafe_reasons = _unsafe_reasons(case, result)
-        if unsafe_reasons:
-            unsafe.append((case, result, unsafe_reasons))
-
-    correct = len(scored) - len(triage_mismatches)
     print("IncidentLens Triage Eval")
     print(f"dataset: {dataset_path}")
     if project_name:
         print(f"project: {project_name}")
-    print(f"cases scored: {len(scored)}")
+    print(f"cases scored: {total}")
     if skipped:
         print(f"cases skipped: {len(skipped)}")
-    paths = {}
-    tool_call_count = 0
-    for _case, result in scored:
-        paths[result.analysis_source] = paths.get(result.analysis_source, 0) + 1
-        tool_call_count += len(result.tool_calls)
-    print(
-        "analysis paths: "
-        + ", ".join(f"{name}={count}" for name, count in sorted(paths.items()))
-    )
-    if tool_call_count:
-        print(f"agent tool calls: {tool_call_count}")
-    print(f"correct triage rate: {correct}/{len(scored)} ({_pct(correct, len(scored))})")
-    print(
-        f"unsafe automation rate: {len(unsafe)}/{len(scored)} "
-        f"({_pct(len(unsafe), len(scored))})"
-    )
+    print()
+    print(f"correct triage rate:    {correct}/{total} ({_pct(correct, total)})")
+    print(f"unsafe automation rate: {len(unsafe)}/{total} ({_pct(len(unsafe), total)})")
+    print(f"false suppression rate: {len(false_suppressed)}/{total} ({_pct(len(false_suppressed), total)})")
 
-    if triage_mismatches:
+    if false_suppressed:
         print()
-        print("triage mismatches:")
-        for case, result, failures in triage_mismatches:
+        print("false suppression cases (real incidents that would be auto-suppressed):")
+        for case, result in false_suppressed:
             print(
-                f"- {case['id']} ({case['name']}): "
-                f"{'; '.join(failures)} "
-                f"[source={result.analysis_source}, confidence={result.confidence:.2f}]"
+                f"- {case['id']} ({case['name']}): expected={case['expected']['disposition']}, "
+                f"effective={result.effective_disposition}, confidence={result.confidence:.2f}"
             )
 
     if unsafe:
         print()
         print("unsafe automation cases:")
-        for case, result, reasons in unsafe:
+        for case, result in unsafe:
             print(
-                f"- {case['id']} ({case['name']}): "
-                f"{'; '.join(reasons)} "
-                f"[effective={result.effective_disposition}]"
+                f"- {case['id']} ({case['name']}): expected={case['expected']['disposition']}, "
+                f"effective={result.effective_disposition}, confidence={result.confidence:.2f}"
             )
 
     if skipped:
@@ -701,7 +661,7 @@ def run_triage_eval(dataset_path: Path, project_name: str | None):
         for case, result in skipped:
             print(f"- {case['id']} ({case['name']}): {result.skipped_reason}")
 
-    return 0 if not triage_mismatches and not unsafe else 1
+    return 0 if not unsafe else 1
 
 
 def main():

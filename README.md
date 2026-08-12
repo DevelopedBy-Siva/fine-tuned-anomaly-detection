@@ -1,142 +1,81 @@
 # IncidentLens
 
-Policy-bound incident analysis agent for noisy logs.
+A policy-bound AIOps agent that turns noisy application logs into actionable incidents.
 
-IncidentLens turns raw error streams into clustered incidents, routes known patterns through deterministic runbooks, uses an LLM for unknown cases, applies guarded automated actions, and verifies outcomes after the fact. The goal is not "fully autonomous ops." The goal is faster triage with auditability and hard safety boundaries.
+IncidentLens clusters logs from Grafana Loki, routes known failures through deterministic runbooks, uses LLM reasoning for ambiguous incidents, and gates automated actions behind safety policies.
 
-## Why This Project Matters
+## What It Does
 
-Modern services produce too many logs for manual triage, but letting an LLM act directly on infrastructure is risky. IncidentLens explores a middle ground:
-
-- deterministic routing for known incidents
-- bounded LLM reasoning for ambiguous incidents
-- policy gates before any automated action
-- full evidence, action, and verifier audit trails
-
-This makes the system useful as an engineering project, not just an AI demo.
-
-## Metrics
-
-IncidentLens keeps the evaluation story intentionally focused:
-
-- Correct triage rate: correct severity, disposition, and root cause or matched runbook across all eval cases.
-- Unsafe automation rate: suppressed, under-triaged, or misrouted incidents that required action.
-
-These two numbers are the project signal. Other operational measurements can stay internal, but they are not the core claim.
-
-Current eval result:
-
-- `30/30` correct triage (`100.0%`) on a labeled incident eval set
-- `0/30` unsafe automation decisions (`0.0%`)
-- Hybrid path coverage: `28` deterministic runbook cases and `2` `llm-agent` long-tail cases
-- Agent behavior observed: `6` tool calls across the long-tail cases
+* Clusters repeated logs into incidents using normalized signatures and time windows
+* Matches known failures against deterministic runbooks
+* Uses LLaMA 3 for ambiguous incidents and root-cause analysis
+* Correlates related incidents to detect failure cascades
+* Applies confidence, severity, and cooldown policies before automated actions
+* Verifies outcomes and re-escalates unresolved incidents
+* Generates incident summaries and sends Discord/email notifications
 
 ## Architecture
 
 ```text
-  Log Server / Loki
-         |
-         v
-  Parser + Signature Normalization
-         |
-         v
-  Incident Clustering
-         |
-         v
-  Evidence Bundle
-  - sample logs
-  - related incidents
-  - matched runbook
-  - known root cause
-         |
-         v
-  Analysis
-  - runbook fast-path for known cases
-  - LLM reasoning for unknown cases
-         |
-         v
-  Policy Engine
-  - confidence thresholds
-  - cooldown checks
-  - disposition floors
-  - count-based escalation rules
-         |
-         v
-  Actions
-  - auto_enrich
-  - auto_suppress
-  - notifications
-         |
-         v
-  Verifier
-  - resolved vs still_firing
-  - re-escalation for under-triaged incidents
-  - runbook tuning hints
+Grafana Loki
+     |
+     v
+Parser + Signature Normalization
+     |
+     v
+Incident Clustering
+     |
+     v
+Evidence Bundle
+     |
+     v
+Runbook Match ----> LLM Investigation
+     |                    |
+     +---------+----------+
+               |
+               v
+         Policy Engine
+               |
+               v
+      Actions + Verification
 ```
 
-## What It Does
-
-- Clusters repeated log events into incidents using normalized signatures and time windows
-- Matches incidents against a runbook catalog for deterministic triage
-- Builds an evidence bundle before analysis so decisions are grounded in context
-- Uses LLM reasoning for incidents that do not cleanly match a runbook
-- Links cascade incidents to earlier likely root causes
-- Applies policy gating before any automated action
-- Auto-enriches incidents with summaries and ticket-ready context
-- Auto-suppresses high-confidence noise incidents
-- Verifies whether actioned incidents actually quiet down
-
-## Safety Model
-
-IncidentLens is intentionally conservative.
-
-- It never restarts services, edits infrastructure, mutates databases, or touches external systems beyond notifications
-- High-impact actions stay human-controlled
-- The policy layer can override weak or inconsistent model output
-- All agent runs are inspectable through stored evidence, tool calls, decisions, and outcomes
-
-This is the core design choice of the project: use AI for analysis, not uncontrolled execution.
-
-## What’s Technically Interesting
-
-- Post-action verification loop instead of treating model output as final truth
-- Hybrid incident routing: deterministic runbooks for common cases, LLM reasoning for long-tail incidents
-- Root-cause chaining across temporally related incidents
-- A focused labeled eval for triage quality and automation safety
-
-## Example Scenarios
-
-- `db_cascade`
-  Pool exhaustion -> payment timeout -> null pointer -> unhandled exception
-- `auth_cascade`
-  Session store failure -> JWT verification failures -> rate-limit anomalies
-- `deployment_gone_wrong`
-  Config change -> resource pressure -> downstream failures
-- `memory_leak`
-  Memory pressure -> OOM kill -> restart cycle
-
-These scenarios exist to exercise clustering, runbook routing, cascade detection, verification, and auditability under repeatable conditions.
+Known failure patterns take the deterministic runbook path, while unknown or ambiguous incidents are analyzed using the LLM. The policy layer sits between analysis and automation so model output cannot directly trigger actions.
 
 ## Evaluation
 
-Use the built-in script to reproduce the two main metrics:
+IncidentLens includes a **150+ scenario labeled evaluation suite** covering:
+
+* known production failure patterns
+* incidents requiring LLM reasoning
+* misleading severity and log-volume signals
+* low-frequency, high-impact failures
+* policy and auto-suppression edge cases
+
+Latest completed evaluation:
+
+```text
+Correct triage:      157/170 (92.4%)
+Unsafe automation:     9/170 (5.3%)
+False suppression:     1/170 (0.6%)
+```
+
+A case is considered correctly triaged only when its expected **severity, disposition, and root cause or runbook** match.
+
+Run the evaluation with:
 
 ```bash
 python log-analyzer/scripts/metrics_report.py triage-eval
-
 ```
 
-The eval dataset is `log-analyzer/evals/incident_triage_cases.json`. Each case defines logs plus the expected severity, disposition, and either a matched runbook or root-cause keywords. The output also reports `analysis paths`, so it is clear how many cases used deterministic runbooks versus the LLM agent.
+## Safety
 
-Example output:
+IncidentLens intentionally limits autonomous actions.
 
-```text
-cases scored: 30
-analysis paths: llm-agent=2, runbook=28
-agent tool calls: 6
-correct triage rate: 30/30 (100.0%)
-unsafe automation rate: 0/30 (0.0%)
-```
+The LLM cannot restart services, modify infrastructure, deploy code, or mutate databases. Automated actions are limited to incident enrichment, high-confidence noise suppression, and notifications.
+
+High-impact remediation stays human-controlled.
+
 
 ## Screenshots
 
@@ -150,53 +89,26 @@ unsafe automation rate: 0/30 (0.0%)
 ---
 ![Email](./imgs/email.png)
 
-Recommended capture set:
-
-- IncidentLens dashboard with clustered incidents
-- Incident details / investigation view
-- Settings / project configuration view
-- Grafana dashboard showing the underlying log stream or service behavior
-
-## Inspectability
-
-Every incident can be inspected through APIs:
-
-```text
-GET /api/incidents/{id}/evidence
-GET /api/incidents/{id}/actions
-GET /api/incidents/{id}/investigation
-```
-
-That makes it easy to answer recruiter-style questions like:
-
-- What evidence did the agent use?
-- Was the decision deterministic or LLM-driven?
-- What action was taken?
-- Did the incident actually resolve?
-
 ## Tech Stack
 
-- Backend: FastAPI, SQLAlchemy, PostgreSQL
-- Log generation: FastAPI, Grafana Loki
-- Frontend: React, Tailwind CSS
-- LLM: `llama-3.3-70b-versatile`
-- Observability: Langfuse
-- Notifications: Discord webhooks, SMTP email
+**Backend:** FastAPI, SQLAlchemy, PostgreSQL
+**Frontend:** React, Tailwind CSS
+**LLM:** LLaMA 3.3 70B, LangChain, Groq
+**Observability:** Grafana Loki, Langfuse
+**Notifications:** Discord, SMTP email
 
 ## Quick Start
 
 ```bash
-# Install backend deps
+# Backend
 pip install -r log-analyzer/requirements.txt
+python -m uvicorn app.main:app --port 8000 --app-dir log-analyzer
 
-# Start backend
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir log-analyzer
-
-# Start log server in another terminal
+# Log server
 pip install -r log-server/requirements.txt
-python -m uvicorn server:app --host 0.0.0.0 --port 5001 --app-dir log-server
+python -m uvicorn server:app --port 5001 --app-dir log-server
 
-# Start frontend
+# Frontend
 cd log-analyzer-frontend
 npm install
 npm start
@@ -204,26 +116,18 @@ npm start
 
 ## Environment
 
-Core backend environment:
-
 ```env
-# Database
 DATABASE_URL=postgresql://user:pass@localhost:5432/log_analyzer
 
-# Loki
 LOKI_URL=https://logs-prod-xxx.grafana.net
-LOKI_USERNAME=your_numeric_id
+LOKI_USERNAME=your_username
 LOKI_API_KEY=your_token
 
-# LLM access
-GROQ_API_KEY=your_groq_key
+GROQ_API_KEY=your_key
+GROQ_API_KEY_2=your_second_key
+GROQ_API_KEY_3=your_third_key
 GROQ_MODEL=llama-3.3-70b-versatile
 
-# Optional fallback chain
-GROQ_MODEL_FALLBACKS=model-a,model-b
-
-# App
 LOG_SERVER_URL=http://localhost:5001
 CORS_ORIGINS=http://localhost:3000
-RESET_DATA_ON_STARTUP=false
 ```

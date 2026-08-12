@@ -23,7 +23,10 @@
       "severity": "high",
       "disposition": "NEEDS_ONCALL",
       "runbook_id": "db_connection_pool_exhausted",
-      "root_cause_keywords": ["connection pool", "pool exhausted"]
+      "root_cause_keywords": [
+        "connection pool",
+        "pool exhausted"
+      ]
     }
   },
   {
@@ -42,7 +45,11 @@
       "severity": "critical",
       "disposition": "ESCALATE",
       "runbook_id": "kubernetes_oom_kill",
-      "root_cause_keywords": ["oom", "memory limit", "killed"]
+      "root_cause_keywords": [
+        "oom",
+        "memory limit",
+        "killed"
+      ]
     }
   },
   {
@@ -65,7 +72,11 @@
       "severity": "low",
       "disposition": "NO_ACTION",
       "runbook_id": "token_expired_noise",
-      "root_cause_keywords": ["token expiry", "jwt expired", "session churn"]
+      "root_cause_keywords": [
+        "token expiry",
+        "jwt expired",
+        "session churn"
+      ]
     }
   },
   {
@@ -88,7 +99,11 @@
       "severity": "low",
       "disposition": "OBSERVE",
       "runbook_id": "csv_parse_error",
-      "root_cause_keywords": ["csv", "malformed row", "column count"]
+      "root_cause_keywords": [
+        "csv",
+        "malformed row",
+        "column count"
+      ]
     }
   },
   {
@@ -111,7 +126,11 @@
       "severity": "medium",
       "disposition": "NEEDS_DEV",
       "runbook_id": "feature_flag_timeout",
-      "root_cause_keywords": ["feature flag", "flag service", "service unreachable"]
+      "root_cause_keywords": [
+        "feature flag",
+        "flag service",
+        "service unreachable"
+      ]
     }
   },
   {
@@ -134,7 +153,11 @@
       "severity": "high",
       "disposition": "NEEDS_ONCALL",
       "runbook_id": "session_store",
-      "root_cause_keywords": ["session store", "redis", "stateless"]
+      "root_cause_keywords": [
+        "session store",
+        "redis",
+        "stateless"
+      ]
     }
   },
   {
@@ -157,7 +180,11 @@
       "severity": "high",
       "disposition": "NEEDS_ONCALL",
       "runbook_id": "security_alerts",
-      "root_cause_keywords": ["brute force", "attack", "failed attempts"]
+      "root_cause_keywords": [
+        "brute force",
+        "attack",
+        "failed attempts"
+      ]
     }
   },
   {
@@ -180,7 +207,11 @@
       "severity": "high",
       "disposition": "NEEDS_ONCALL",
       "runbook_id": "payment_gateway",
-      "root_cause_keywords": ["payment gateway", "stripe", "timeout"]
+      "root_cause_keywords": [
+        "payment gateway",
+        "stripe",
+        "timeout"
+      ]
     }
   },
   {
@@ -203,7 +234,11 @@
       "severity": "low",
       "disposition": "OBSERVE",
       "runbook_id": "data_validation",
-      "root_cause_keywords": ["validation", "schema", "data rejected"]
+      "root_cause_keywords": [
+        "validation",
+        "schema",
+        "data rejected"
+      ]
     }
   },
   {
@@ -226,7 +261,11 @@
       "severity": "medium",
       "disposition": "NEEDS_DEV",
       "runbook_id": "file_upload",
-      "root_cause_keywords": ["s3", "object storage", "upload"]
+      "root_cause_keywords": [
+        "s3",
+        "object storage",
+        "upload"
+      ]
     }
   },
   {
@@ -245,7 +284,11 @@
       "severity": "critical",
       "disposition": "ESCALATE",
       "runbook_id": "disk_space",
-      "root_cause_keywords": ["disk space", "disk full", "write operations"]
+      "root_cause_keywords": [
+        "disk space",
+        "disk full",
+        "write operations"
+      ]
     }
   },
   {
@@ -268,7 +311,11 @@
       "severity": "high",
       "disposition": "NEEDS_DEV",
       "runbook_id": "cache_stampede",
-      "root_cause_keywords": ["cache stampede", "cache miss", "simultaneous db queries"]
+      "root_cause_keywords": [
+        "cache stampede",
+        "cache miss",
+        "simultaneous db queries"
+      ]
     }
   },
   {
@@ -291,7 +338,11 @@
       "severity": "medium",
       "disposition": "OBSERVE",
       "runbook_id": "websocket_connection_dropped",
-      "root_cause_keywords": ["websocket", "connection dropped", "ping timeout"]
+      "root_cause_keywords": [
+        "websocket",
+        "connection dropped",
+        "ping timeout"
+      ]
     }
   },
   {
@@ -314,7 +365,11 @@
       "severity": "medium",
       "disposition": "NEEDS_DEV",
       "runbook_id": "api_schema_mismatch",
-      "root_cause_keywords": ["schema", "api response", "expected field"]
+      "root_cause_keywords": [
+        "schema",
+        "api response",
+        "expected field"
+      ]
     }
   },
   {
@@ -340,7 +395,12 @@
     "expected": {
       "severity": "high",
       "disposition": "NEEDS_ONCALL",
-      "root_cause_keywords": ["deploy", "config", "rollback", "pool size"]
+      "root_cause_keywords": [
+        "deploy",
+        "config",
+        "rollback",
+        "pool size"
+      ]
     }
   },
   {
@@ -366,7 +426,12 @@
     "expected": {
       "severity": "high",
       "disposition": "NEEDS_DEV",
-      "root_cause_keywords": ["certificate", "tls", "x509", "expired"]
+      "root_cause_keywords": [
+        "certificate",
+        "tls",
+        "x509",
+        "expired"
+      ]
     }
   },
   {
@@ -389,7 +454,11 @@
       "severity": "high",
       "disposition": "NEEDS_ONCALL",
       "runbook_id": "service_unavailable",
-      "root_cause_keywords": ["service unavailable", "503", "circuit breaker"]
+      "root_cause_keywords": [
+        "service unavailable",
+        "503",
+        "circuit breaker"
+      ]
     }
   },
   {
@@ -412,7 +481,11 @@
       "severity": "high",
       "disposition": "NEEDS_ONCALL",
       "runbook_id": "message_queue",
-      "root_cause_keywords": ["queue", "consumer lag", "backlog"]
+      "root_cause_keywords": [
+        "queue",
+        "consumer lag",
+        "backlog"
+      ]
     }
   },
   {
@@ -435,7 +508,11 @@
       "severity": "high",
       "disposition": "NEEDS_ONCALL",
       "runbook_id": "elasticsearch_shard_failure",
-      "root_cause_keywords": ["shard", "elasticsearch", "search"]
+      "root_cause_keywords": [
+        "shard",
+        "elasticsearch",
+        "search"
+      ]
     }
   },
   {
@@ -458,7 +535,11 @@
       "severity": "high",
       "disposition": "NEEDS_ONCALL",
       "runbook_id": "cdn_origin_pull_failed",
-      "root_cause_keywords": ["cdn", "origin", "stale cache"]
+      "root_cause_keywords": [
+        "cdn",
+        "origin",
+        "stale cache"
+      ]
     }
   },
   {
@@ -481,7 +562,11 @@
       "severity": "high",
       "disposition": "NEEDS_DEV",
       "runbook_id": "grpc_deadline_exceeded",
-      "root_cause_keywords": ["grpc", "deadline exceeded", "timeout"]
+      "root_cause_keywords": [
+        "grpc",
+        "deadline exceeded",
+        "timeout"
+      ]
     }
   },
   {
@@ -504,7 +589,11 @@
       "severity": "high",
       "disposition": "NEEDS_DEV",
       "runbook_id": "db_deadlock",
-      "root_cause_keywords": ["deadlock", "transaction", "rolled back"]
+      "root_cause_keywords": [
+        "deadlock",
+        "transaction",
+        "rolled back"
+      ]
     }
   },
   {
@@ -527,7 +616,11 @@
       "severity": "medium",
       "disposition": "OBSERVE",
       "runbook_id": "db_replication_lag",
-      "root_cause_keywords": ["replication lag", "replica", "read consistency"]
+      "root_cause_keywords": [
+        "replication lag",
+        "replica",
+        "read consistency"
+      ]
     }
   },
   {
@@ -550,7 +643,11 @@
       "severity": "high",
       "disposition": "NEEDS_DEV",
       "runbook_id": "idempotency_violation",
-      "root_cause_keywords": ["idempotency", "duplicate payment", "duplicate request"]
+      "root_cause_keywords": [
+        "idempotency",
+        "duplicate payment",
+        "duplicate request"
+      ]
     }
   },
   {
@@ -573,7 +670,11 @@
       "severity": "high",
       "disposition": "NEEDS_ONCALL",
       "runbook_id": "payment_fraud",
-      "root_cause_keywords": ["fraud", "risk engine", "score"]
+      "root_cause_keywords": [
+        "fraud",
+        "risk engine",
+        "score"
+      ]
     }
   },
   {
@@ -596,7 +697,11 @@
       "severity": "low",
       "disposition": "OBSERVE",
       "runbook_id": "file_not_found",
-      "root_cause_keywords": ["file not found", "tmp", "upload"]
+      "root_cause_keywords": [
+        "file not found",
+        "tmp",
+        "upload"
+      ]
     }
   },
   {
@@ -619,7 +724,11 @@
       "severity": "medium",
       "disposition": "OBSERVE",
       "runbook_id": "redis_connection",
-      "root_cause_keywords": ["redis", "connection", "timeout"]
+      "root_cause_keywords": [
+        "redis",
+        "connection",
+        "timeout"
+      ]
     }
   },
   {
@@ -642,7 +751,11 @@
       "severity": "medium",
       "disposition": "OBSERVE",
       "runbook_id": "memory_pressure",
-      "root_cause_keywords": ["memory pressure", "heap", "gc"]
+      "root_cause_keywords": [
+        "memory pressure",
+        "heap",
+        "gc"
+      ]
     }
   },
   {
@@ -661,7 +774,11 @@
       "severity": "critical",
       "disposition": "ESCALATE",
       "runbook_id": "stack_overflow",
-      "root_cause_keywords": ["stack overflow", "maximum call depth", "circular reference"]
+      "root_cause_keywords": [
+        "stack overflow",
+        "maximum call depth",
+        "circular reference"
+      ]
     }
   },
   {
@@ -684,7 +801,4628 @@
       "severity": "high",
       "disposition": "NEEDS_ONCALL",
       "runbook_id": "db_connection_timeout",
-      "root_cause_keywords": ["database", "connection timeout", "db"]
+      "root_cause_keywords": [
+        "database",
+        "connection timeout",
+        "db"
+      ]
+    }
+  },
+  {
+    "id": "triage-031",
+    "name": "Container registry auth token expired blocking deploy",
+    "source": "deploy-pipeline",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ContainerRegistryAuthError: failed to pull image myapp:v3.2.1 from registry.internal - authentication token expired, deployment blocked"
+      },
+      {
+        "level": "ERROR",
+        "message": "ContainerRegistryAuthError: failed to pull image myapp-worker:v3.2.1 from registry.internal - authentication token expired, deployment blocked"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "root_cause_keywords": [
+        "registry",
+        "authentication token",
+        "token expired",
+        "container image"
+      ]
+    }
+  },
+  {
+    "id": "triage-032",
+    "name": "Intermittent internal DNS resolution failures",
+    "source": "service-mesh",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "DNSResolutionError: intermittent failures resolving internal-service.svc.cluster.local - getaddrinfo ENOTFOUND"
+      },
+      {
+        "level": "ERROR",
+        "message": "DNSResolutionError: intermittent failures resolving billing-service.svc.cluster.local - getaddrinfo ENOTFOUND"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "root_cause_keywords": [
+        "dns",
+        "resolution",
+        "getaddrinfo",
+        "service discovery"
+      ]
+    }
+  },
+  {
+    "id": "triage-033",
+    "name": "Third-party carrier API rate limiting shipment labels",
+    "source": "shipping-worker",
+    "environment": "prod",
+    "count": 9,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CarrierAPIRateLimitError: FedEx rate API returned 429 Too Many Requests - shipment label generation delayed"
+      },
+      {
+        "level": "ERROR",
+        "message": "CarrierAPIRateLimitError: UPS rate API returned 429 Too Many Requests - shipment label generation delayed"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "root_cause_keywords": [
+        "rate limit",
+        "429",
+        "carrier api",
+        "fedex"
+      ]
+    }
+  },
+  {
+    "id": "triage-034",
+    "name": "Mass session invalidation misread as routine token-expiry noise",
+    "source": "auth-service",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "TokenExpiredError: JWT expired at 03:14:02 - user forced to re-login (mass logout observed: 40,000 sessions invalidated across all users after signing-key rotation)"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "root_cause_keywords": [
+        "signing key rotation",
+        "mass logout",
+        "sessions invalidated"
+      ]
+    }
+  },
+  {
+    "id": "triage-035",
+    "name": "Silent financial reconciliation discrepancy",
+    "source": "ledger-worker",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "ReconciliationJobError: nightly ledger reconciliation failed - financial discrepancy of $84,200 detected between payment records and bank statement, job exited silently after partial run"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "root_cause_keywords": [
+        "reconciliation",
+        "discrepancy",
+        "ledger"
+      ]
+    }
+  },
+  {
+    "id": "triage-036",
+    "name": "Low-occurrence but urgent client integration outage",
+    "source": "integrations-worker",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "IntegrationOutage: primary sync connector to enterprise client Acme Corp has failed for 45 minutes straight - client-facing dashboard shows zero data"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "root_cause_keywords": [
+        "integration",
+        "sync connector",
+        "client-facing"
+      ]
+    }
+  },
+  {
+    "id": "triage-037",
+    "name": "Null pointer exception in order processing",
+    "source": "orders-api",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "NullPointerException: unexpected null reference in OrderProcessor.calculateTotal() - request returned 500"
+      },
+      {
+        "level": "ERROR",
+        "message": "NullPointerException: unexpected null reference propagated to global handler"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "application_exceptions",
+      "root_cause_keywords": [
+        "null reference",
+        "exception",
+        "500"
+      ]
+    }
+  },
+  {
+    "id": "triage-038",
+    "name": "JWT tampering and login rate limit hit",
+    "source": "auth-service",
+    "environment": "prod",
+    "count": 8,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "InvalidSignatureError: JWT signature verification failed for user session - possible token tampering detected"
+      },
+      {
+        "level": "ERROR",
+        "message": "RateLimitExceeded: too many login attempts from IP 203.0.113.44 - blocked for 15 minutes"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "auth_errors",
+      "root_cause_keywords": [
+        "signature",
+        "tampering",
+        "rate limit"
+      ]
+    }
+  },
+  {
+    "id": "triage-039",
+    "name": "JVM heap exhausted during batch job",
+    "source": "batch-worker",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "CRITICAL",
+        "message": "OutOfMemoryError: Java heap space exhausted - heap max 2048mb reached during nightly batch job"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "memory_error",
+      "root_cause_keywords": [
+        "heap",
+        "out of memory",
+        "java"
+      ]
+    }
+  },
+  {
+    "id": "triage-040",
+    "name": "Card declined and insufficient funds errors",
+    "source": "payments-api",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CardDeclinedError: card declined - do_not_honor response from issuing bank"
+      },
+      {
+        "level": "ERROR",
+        "message": "InsufficientFundsException: insufficient_funds - payment processing failed for order 88231"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "payment_failed",
+      "root_cause_keywords": [
+        "card declined",
+        "insufficient funds",
+        "payment"
+      ]
+    }
+  },
+  {
+    "id": "triage-041",
+    "name": "DB pool exhausted on orders service",
+    "source": "orders-api",
+    "environment": "prod",
+    "count": 8,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ConnectionPoolExhaustedError: All 50 connections in use - orders-api requests queued for >45s"
+      },
+      {
+        "level": "ERROR",
+        "message": "ConnectionPoolExhaustedError: All 50 connections in use - pool exhausted, requests failing"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "db_connection_pool_exhausted",
+      "root_cause_keywords": [
+        "connection pool",
+        "pool exhausted"
+      ]
+    }
+  },
+  {
+    "id": "triage-042",
+    "name": "Worker node OOM killed",
+    "source": "batch-platform",
+    "environment": "prod",
+    "count": 2,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "OOMKilled: Container worker-node-3f2a exceeded memory limit and was killed by the kernel"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "kubernetes_oom_kill",
+      "root_cause_keywords": [
+        "oom",
+        "memory limit",
+        "killed"
+      ]
+    }
+  },
+  {
+    "id": "triage-043",
+    "name": "Cache stampede on user profile key",
+    "source": "profile-cache",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CacheStampedeDetected: Cache miss storm on key 'user-profile' - 480 simultaneous DB queries"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "cache_stampede",
+      "root_cause_keywords": [
+        "cache stampede",
+        "cache miss",
+        "simultaneous db queries"
+      ]
+    }
+  },
+  {
+    "id": "triage-044",
+    "name": "XSS payload blocked in comment field",
+    "source": "security-edge",
+    "environment": "prod",
+    "count": 15,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "SecurityAlert: XSS payload detected in comment field - sanitization applied"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "security_alerts",
+      "root_cause_keywords": [
+        "xss",
+        "payload",
+        "sanitization"
+      ]
+    }
+  },
+  {
+    "id": "triage-045",
+    "name": "Inventory service circuit breaker opened",
+    "source": "edge-router",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ServiceUnavailableError: inventory-service returned 503 after 3 retries - circuit breaker opened"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "service_unavailable",
+      "root_cause_keywords": [
+        "service unavailable",
+        "503",
+        "circuit breaker"
+      ]
+    }
+  },
+  {
+    "id": "triage-046",
+    "name": "Elasticsearch shard failure on orders index",
+    "source": "search-api",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ShardFailureException: Primary shard for index 'orders-v2' unavailable - search results degraded"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "elasticsearch_shard_failure",
+      "root_cause_keywords": [
+        "shard",
+        "elasticsearch",
+        "search"
+      ]
+    }
+  },
+  {
+    "id": "triage-047",
+    "name": "SMS queue backlog critical",
+    "source": "notifications-worker",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "QueueDepthCritical: sms-queue has 45000 pending messages - consumer lag growing"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "message_queue",
+      "root_cause_keywords": [
+        "queue",
+        "consumer lag",
+        "backlog"
+      ]
+    }
+  },
+  {
+    "id": "triage-048",
+    "name": "Data volume disk critical",
+    "source": "scheduler",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "CRITICAL",
+        "message": "DiskSpaceCritical: /data is 95% full - write operations may fail"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "disk_space",
+      "root_cause_keywords": [
+        "disk space",
+        "disk full",
+        "write operations"
+      ]
+    }
+  },
+  {
+    "id": "triage-049",
+    "name": "Geocoding API deprecated response schema",
+    "source": "location-worker",
+    "environment": "prod",
+    "count": 7,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "GeocodingAPIError: Mapbox reverse-geocoding endpoint returned deprecated response schema - address parsing failed for 12% of requests"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "root_cause_keywords": [
+        "geocoding",
+        "deprecated schema",
+        "address parsing"
+      ]
+    }
+  },
+  {
+    "id": "triage-050",
+    "name": "SSO provider intermittent 500s on employee logins",
+    "source": "internal-sso",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "SSOProviderError: Okta identity provider returned intermittent 500 responses - some employee logins failing"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "root_cause_keywords": [
+        "sso",
+        "okta",
+        "identity provider"
+      ]
+    }
+  },
+  {
+    "id": "triage-051",
+    "name": "GraphQL federation schema stitching failure",
+    "source": "graphql-gateway",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "GatewayError: federated GraphQL schema stitching failed after subgraph deploy - queries against 'inventory' subgraph returning null"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "root_cause_keywords": [
+        "graphql",
+        "schema stitching",
+        "subgraph"
+      ]
+    }
+  },
+  {
+    "id": "triage-052",
+    "name": "Log shipping agent silently stopped forwarding",
+    "source": "log-pipeline",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "LogShipperError: Fluentd agent on host prod-app-14 stopped forwarding logs 20 minutes ago - no error emitted, detected via heartbeat gap"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "root_cause_keywords": [
+        "log shipper",
+        "fluentd",
+        "heartbeat"
+      ]
+    }
+  },
+  {
+    "id": "triage-053",
+    "name": "Analytics conversion pixel failing to fire",
+    "source": "analytics-worker",
+    "environment": "prod",
+    "count": 9,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "AnalyticsPixelError: conversion tracking pixel failing to fire for 30% of checkout completions - revenue attribution data incomplete"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "root_cause_keywords": [
+        "conversion tracking",
+        "pixel",
+        "attribution"
+      ]
+    }
+  },
+  {
+    "id": "triage-054",
+    "name": "Cluster autoscaler stuck under pending pods",
+    "source": "k8s-platform",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "AutoscalerStuckError: cluster autoscaler has not scaled up in 25 minutes despite pending pods - node provisioning appears stalled"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "root_cause_keywords": [
+        "autoscaler",
+        "pending pods",
+        "node provisioning"
+      ]
+    }
+  },
+  {
+    "id": "triage-055",
+    "name": "Inbound webhook signatures rejected after library upgrade",
+    "source": "webhooks-gateway",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "WebhookVerificationError: incoming webhook signatures failing verification after security library upgrade - all inbound webhooks rejected"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "root_cause_keywords": [
+        "webhook",
+        "signature verification",
+        "library upgrade"
+      ]
+    }
+  },
+  {
+    "id": "triage-056",
+    "name": "Admin tool losing S3 access after IAM migration",
+    "source": "internal-admin",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "IAMPermissionError: admin-tool service account denied access to S3 bucket after IAM policy migration - internal reporting jobs failing"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "root_cause_keywords": [
+        "iam",
+        "permission denied",
+        "s3 bucket"
+      ]
+    }
+  },
+  {
+    "id": "triage-057",
+    "name": "Silently failed GDPR deletion job",
+    "source": "compliance-worker",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "ComplianceCheckWarning: GDPR data deletion request for user 88213 could not be completed - deletion job silently failed, PII retained past required deletion window"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "root_cause_keywords": [
+        "gdpr",
+        "deletion job",
+        "pii retained"
+      ]
+    }
+  },
+  {
+    "id": "triage-058",
+    "name": "Schema migration partially applied during deploy",
+    "source": "migrations-runner",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "MigrationError: schema migration 0047_add_index partially applied before failing - database now in inconsistent intermediate state, single occurrence during deploy window"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "root_cause_keywords": [
+        "migration",
+        "partially applied",
+        "inconsistent state"
+      ]
+    }
+  },
+  {
+    "id": "triage-059",
+    "name": "High-volume but expected cache pre-warm notice",
+    "source": "search-index-worker",
+    "environment": "prod",
+    "count": 1200,
+    "logs": [
+      {
+        "level": "INFO",
+        "message": "CacheWarmingNotice: pre-warm job for search-index completed with 1200 partial batches - expected during nightly index rebuild"
+      }
+    ],
+    "expected": {
+      "severity": "low",
+      "disposition": "OBSERVE",
+      "root_cause_keywords": [
+        "cache warming",
+        "index rebuild",
+        "expected"
+      ]
+    }
+  },
+  {
+    "id": "triage-060",
+    "name": "Elevated transactional email bounce rate",
+    "source": "email-service",
+    "environment": "prod",
+    "count": 10,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "EmailBounceRateWarning: bounce rate elevated to 8% for transactional emails - deliverability degraded"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "OBSERVE",
+      "root_cause_keywords": [
+        "bounce rate",
+        "deliverability",
+        "email"
+      ]
+    }
+  },
+  {
+    "id": "triage-061",
+    "name": "DB pool exhausted during checkout — variant 1",
+    "source": "checkout-worker",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ConnectionPoolExhaustedError: All 27 connections in use - requests waiting beyond the configured timeout"
+      },
+      {
+        "level": "ERROR",
+        "message": "ConnectionPoolExhaustedError: connection pool has no free slots - pool exhausted, requests failing"
+      },
+      {
+        "level": "ERROR",
+        "message": "PaymentGatewayTimeout: payment provider exceeded the gateway response deadline - no DB connection available to log transaction"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "db_connection_pool_exhausted",
+      "root_cause_keywords": [
+        "connection pool",
+        "pool exhausted"
+      ]
+    }
+  },
+  {
+    "id": "triage-062",
+    "name": "Container OOM killed by Kubernetes — variant 1",
+    "source": "k8s-workloads",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "OOMKilled: Container api-server-7d9f crossed the container memory ceiling and was terminated by the node OOM killer"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "kubernetes_oom_kill",
+      "root_cause_keywords": [
+        "oom",
+        "memory limit",
+        "killed"
+      ]
+    }
+  },
+  {
+    "id": "triage-063",
+    "name": "Expected JWT expiry noise — variant 1",
+    "source": "session-api",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "TokenExpiredError: session token is past its expiry at 30:36:22 - interactive login required again"
+      },
+      {
+        "level": "WARN",
+        "message": "TokenExpiredError: session token is past its expiry at 37:44:40 - user forced to re-login"
+      }
+    ],
+    "expected": {
+      "severity": "low",
+      "disposition": "NO_ACTION",
+      "runbook_id": "token_expired_noise",
+      "root_cause_keywords": [
+        "token expiry",
+        "jwt expired",
+        "session churn"
+      ]
+    }
+  },
+  {
+    "id": "triage-064",
+    "name": "Malformed CSV import rows — variant 1",
+    "source": "bulk-importer",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CSVParseError: invalid record shape at line 409 - field count does not match the CSV header"
+      },
+      {
+        "level": "ERROR",
+        "message": "CSVParseError: invalid record shape at line 437 - unexpected column count"
+      }
+    ],
+    "expected": {
+      "severity": "low",
+      "disposition": "OBSERVE",
+      "runbook_id": "csv_parse_error",
+      "root_cause_keywords": [
+        "csv",
+        "malformed row",
+        "column count"
+      ]
+    }
+  },
+  {
+    "id": "triage-065",
+    "name": "Feature flag service timeout — variant 1",
+    "source": "config-flags",
+    "environment": "prod",
+    "count": 7,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "FeatureFlagTimeout: Failed to evaluate flag 'checkout-v2' - defaulting to off, flag backend could not be contacted"
+      },
+      {
+        "level": "ERROR",
+        "message": "FeatureFlagTimeout: Failed to evaluate flag 'new-pricing-engine' - defaulting to off, service unreachable"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "feature_flag_timeout",
+      "root_cause_keywords": [
+        "feature flag",
+        "flag service",
+        "service unreachable"
+      ]
+    }
+  },
+  {
+    "id": "triage-066",
+    "name": "Session store unavailable — variant 1",
+    "source": "session-api",
+    "environment": "prod",
+    "count": 2,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "SessionStoreError: session persistence backend is unavailable - falling back to stateless mode"
+      },
+      {
+        "level": "ERROR",
+        "message": "InvalidSignatureError: JWT token signature could not be verified - session store unavailable, token cannot be re-validated"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "session_store",
+      "root_cause_keywords": [
+        "session store",
+        "redis",
+        "stateless"
+      ]
+    }
+  },
+  {
+    "id": "triage-067",
+    "name": "Brute force login attack — variant 1",
+    "source": "waf-gateway",
+    "environment": "prod",
+    "count": 11,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "BruteForceDetected: 334 failed attempts on /api/login in 60s"
+      },
+      {
+        "level": "ERROR",
+        "message": "SecurityAlert: SQL injection pattern detected in request - query blocked and IP flagged"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "security_alerts",
+      "root_cause_keywords": [
+        "brute force",
+        "attack",
+        "failed attempts"
+      ]
+    }
+  },
+  {
+    "id": "triage-068",
+    "name": "Payment gateway timeout — variant 1",
+    "source": "cart-api",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "PaymentGatewayTimeout: payment provider exceeded the gateway response deadline - transaction aborted"
+      },
+      {
+        "level": "ERROR",
+        "message": "PaymentGatewayTimeout: gateway vendor did not respond within 15s - duplicate retries suppressed"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "payment_gateway",
+      "root_cause_keywords": [
+        "payment gateway",
+        "stripe",
+        "timeout"
+      ]
+    }
+  },
+  {
+    "id": "triage-069",
+    "name": "Input validation failures — variant 1",
+    "source": "profile-api",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "ValidationError: Field 'email' failed input contract validation - request payload refused"
+      },
+      {
+        "level": "WARN",
+        "message": "ValidationError: Field 'phone_number' failed input contract validation - data rejected"
+      }
+    ],
+    "expected": {
+      "severity": "low",
+      "disposition": "OBSERVE",
+      "runbook_id": "data_validation",
+      "root_cause_keywords": [
+        "validation",
+        "schema",
+        "data rejected"
+      ]
+    }
+  },
+  {
+    "id": "triage-070",
+    "name": "Object storage upload failures — variant 1",
+    "source": "media-api",
+    "environment": "prod",
+    "count": 10,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "FileUploadError: object persistence failed for .pdf to object storage - S3 returned 535"
+      },
+      {
+        "level": "ERROR",
+        "message": "FileUploadError: Failed to write .csv to object storage - S3 returned 507"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "file_upload",
+      "root_cause_keywords": [
+        "s3",
+        "object storage",
+        "upload"
+      ]
+    }
+  },
+  {
+    "id": "triage-071",
+    "name": "Database disk almost full — variant 1",
+    "source": "cron-runner",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "CRITICAL",
+        "message": "DiskSpaceCritical: /var/lib/postgresql is 105% full - writes are at risk of failing"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "disk_space",
+      "root_cause_keywords": [
+        "disk space",
+        "disk full",
+        "write operations"
+      ]
+    }
+  },
+  {
+    "id": "triage-072",
+    "name": "Cache stampede overload — variant 1",
+    "source": "cache-service",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CacheStampedeDetected: Cache miss storm on key 'product-catalog' - 334 concurrent database lookups"
+      },
+      {
+        "level": "ERROR",
+        "message": "DatabaseConnectionError: database connection attempt timed out to db-analytics-3:5453"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "cache_stampede",
+      "root_cause_keywords": [
+        "cache stampede",
+        "cache miss",
+        "simultaneous db queries"
+      ]
+    }
+  },
+  {
+    "id": "triage-073",
+    "name": "WebSocket instability — variant 1",
+    "source": "realtime-gateway",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "WebSocketError: Connection dropped for user 12909 - reason: ping timeout"
+      },
+      {
+        "level": "WARN",
+        "message": "WebSocketError: socket disconnected unexpectedly for user 23916 - reason: transport close"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "OBSERVE",
+      "runbook_id": "websocket_connection_dropped",
+      "root_cause_keywords": [
+        "websocket",
+        "connection dropped",
+        "ping timeout"
+      ]
+    }
+  },
+  {
+    "id": "triage-074",
+    "name": "External API schema changed — variant 1",
+    "source": "integration-api",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "SchemaMismatchError: Salesforce API response contract no longer matches - expected field missing in response"
+      },
+      {
+        "level": "ERROR",
+        "message": "SchemaMismatchError: HubSpot API response shape changed - expected field missing in response"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "api_schema_mismatch",
+      "root_cause_keywords": [
+        "schema",
+        "api response",
+        "expected field"
+      ]
+    }
+  },
+  {
+    "id": "triage-075",
+    "name": "Downstream service unavailable — variant 1",
+    "source": "traffic-gateway",
+    "environment": "prod",
+    "count": 9,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ServiceUnavailableError: recommendation-engine responded with HTTP 538 after 3 retries - circuit breaker transitioned to open"
+      },
+      {
+        "level": "ERROR",
+        "message": "ServiceUnavailableError: search-service returned 510 after 3 retries - circuit breaker transitioned to open"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "service_unavailable",
+      "root_cause_keywords": [
+        "service unavailable",
+        "503",
+        "circuit breaker"
+      ]
+    }
+  },
+  {
+    "id": "triage-076",
+    "name": "Message queue backlog — variant 1",
+    "source": "delivery-worker",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "QueueDepthCritical: email-queue has 88007 pending messages - consumer delay continues to increase"
+      },
+      {
+        "level": "ERROR",
+        "message": "QueueDepthCritical: webhook-queue has 91014 pending messages - consumer lag growing"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "message_queue",
+      "root_cause_keywords": [
+        "queue",
+        "consumer lag",
+        "backlog"
+      ]
+    }
+  },
+  {
+    "id": "triage-077",
+    "name": "Elasticsearch primary shard unavailable — variant 1",
+    "source": "query-api",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ShardFailureException: primary search shard for index 'products-v3' unavailable - search results degraded"
+      },
+      {
+        "level": "ERROR",
+        "message": "SearchTimeout: product search exceeded 5s timeout while primary search shard unavailable"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "elasticsearch_shard_failure",
+      "root_cause_keywords": [
+        "shard",
+        "elasticsearch",
+        "search"
+      ]
+    }
+  },
+  {
+    "id": "triage-078",
+    "name": "CDN cannot reach origin — variant 1",
+    "source": "asset-gateway",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CDNOriginError: Origin pull failed for /static/js/main.chunk.js - 523 from origin, serving stale cache"
+      },
+      {
+        "level": "ERROR",
+        "message": "CDNOriginError: edge fetch from origin failed for /static/css/app.css - 530 from origin, serving stale cache"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "cdn_origin_pull_failed",
+      "root_cause_keywords": [
+        "cdn",
+        "origin",
+        "stale cache"
+      ]
+    }
+  },
+  {
+    "id": "triage-079",
+    "name": "gRPC deadline exceeded — variant 1",
+    "source": "fulfillment-api",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "DeadlineExceeded: gRPC call to inventory-grpc timed out after 5000ms - context cancelled by client"
+      },
+      {
+        "level": "ERROR",
+        "message": "DeadlineExceeded: gRPC call to shipping-grpc timed out after 5000ms - context cancelled by client"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "grpc_deadline_exceeded",
+      "root_cause_keywords": [
+        "grpc",
+        "deadline exceeded",
+        "timeout"
+      ]
+    }
+  },
+  {
+    "id": "triage-080",
+    "name": "Database deadlock — variant 1",
+    "source": "orders-worker",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "DeadlockException: database detected a transactional deadlock on table 'orders' - rolled back"
+      },
+      {
+        "level": "ERROR",
+        "message": "DeadlockException: Transaction deadlock detected on table 'payments' - rolled back"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "db_deadlock",
+      "root_cause_keywords": [
+        "deadlock",
+        "transaction",
+        "rolled back"
+      ]
+    }
+  },
+  {
+    "id": "triage-081",
+    "name": "Database replication lag — variant 1",
+    "source": "read-replica-client",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "ReplicationLagWarning: read replica is significantly behind the writer - read consistency degraded"
+      },
+      {
+        "level": "WARN",
+        "message": "ReplicationLagWarning: read replica is significantly behind the writer - read consistency degraded"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "OBSERVE",
+      "runbook_id": "db_replication_lag",
+      "root_cause_keywords": [
+        "replication lag",
+        "replica",
+        "read consistency"
+      ]
+    }
+  },
+  {
+    "id": "triage-082",
+    "name": "Duplicate payment request blocked — variant 1",
+    "source": "billing-api",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "IdempotencyViolation: Duplicate payment request detected - second charge blocked"
+      },
+      {
+        "level": "ERROR",
+        "message": "IdempotencyViolation: Duplicate request detected - idempotency key replayed"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "idempotency_violation",
+      "root_cause_keywords": [
+        "idempotency",
+        "duplicate payment",
+        "duplicate request"
+      ]
+    }
+  },
+  {
+    "id": "triage-083",
+    "name": "Fraud detection alert — variant 1",
+    "source": "risk-api",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "FraudDetectionAlert: Transaction flagged by risk engine - risk score crossed the configured threshold"
+      },
+      {
+        "level": "ERROR",
+        "message": "FraudDetectionAlert: Transaction flagged by risk engine - score exceeded threshold"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "payment_fraud",
+      "root_cause_keywords": [
+        "fraud",
+        "risk engine",
+        "score"
+      ]
+    }
+  },
+  {
+    "id": "triage-084",
+    "name": "Uploaded temp file missing — variant 1",
+    "source": "upload-processor",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "FileNotFoundError: temporary upload file is missing at /tmp/upload_3842 - no such file or directory"
+      },
+      {
+        "level": "WARN",
+        "message": "FileNotFoundError: temporary upload file is missing at /tmp/upload_4911 - no such file or directory"
+      }
+    ],
+    "expected": {
+      "severity": "low",
+      "disposition": "OBSERVE",
+      "runbook_id": "file_not_found",
+      "root_cause_keywords": [
+        "file not found",
+        "tmp",
+        "upload"
+      ]
+    }
+  },
+  {
+    "id": "triage-085",
+    "name": "Redis cache connection failures — variant 1",
+    "source": "cache-adapter",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "Redis connection failed: connection refused at cache-primary:6414"
+      },
+      {
+        "level": "ERROR",
+        "message": "Redis timeout while reading key user-permissions"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "OBSERVE",
+      "runbook_id": "redis_connection",
+      "root_cause_keywords": [
+        "redis",
+        "connection",
+        "timeout"
+      ]
+    }
+  },
+  {
+    "id": "triage-086",
+    "name": "Memory pressure before OOM — variant 1",
+    "source": "billing-service",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "MemoryPressureWarning: Heap at 90% - GC pause times exceeding 500ms"
+      },
+      {
+        "level": "WARN",
+        "message": "MemoryPressureWarning: heap utilization is above the warning threshold - GC frequency increasing"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "OBSERVE",
+      "runbook_id": "memory_pressure",
+      "root_cause_keywords": [
+        "memory pressure",
+        "heap",
+        "gc"
+      ]
+    }
+  },
+  {
+    "id": "triage-087",
+    "name": "Stack overflow runtime failure — variant 1",
+    "source": "rules-engine",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "CRITICAL",
+        "message": "StackOverflowError: recursive call depth limit reached in RecursiveResolver - possible circular reference"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "stack_overflow",
+      "root_cause_keywords": [
+        "stack overflow",
+        "maximum call depth",
+        "circular reference"
+      ]
+    }
+  },
+  {
+    "id": "triage-088",
+    "name": "Database connection timeout — variant 1",
+    "source": "checkout-worker",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "Database connection timeout: DatabaseConnectionError: database connection attempt timed out to db-primary-1:5453 - could not connect to database"
+      },
+      {
+        "level": "ERROR",
+        "message": "Database connection timeout: DatabaseConnectionError: database connection attempt timed out to db-replica-2:5460 - could not connect to database"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "db_connection_timeout",
+      "root_cause_keywords": [
+        "database",
+        "connection timeout",
+        "db"
+      ]
+    }
+  },
+  {
+    "id": "triage-089",
+    "name": "Null pointer exception in order processing — variant 1",
+    "source": "orders-worker",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "NullPointerException: unexpected null reference in OrderProcessor.calculateTotal() - request returned 528"
+      },
+      {
+        "level": "ERROR",
+        "message": "NullPointerException: null object dereference propagated to global handler"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "application_exceptions",
+      "root_cause_keywords": [
+        "null reference",
+        "exception",
+        "500"
+      ]
+    }
+  },
+  {
+    "id": "triage-090",
+    "name": "JWT tampering and login rate limit hit — variant 1",
+    "source": "session-api",
+    "environment": "prod",
+    "count": 10,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "InvalidSignatureError: JWT token signature could not be verified for user session - possible token tampering detected"
+      },
+      {
+        "level": "ERROR",
+        "message": "RateLimitExceeded: too many login attempts from IP 210.0.120.51 - blocked for 22 minutes"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "auth_errors",
+      "root_cause_keywords": [
+        "signature",
+        "tampering",
+        "rate limit"
+      ]
+    }
+  },
+  {
+    "id": "triage-091",
+    "name": "JVM heap exhausted during batch job — variant 1",
+    "source": "etl-worker",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "CRITICAL",
+        "message": "OutOfMemoryError: JVM cannot allocate additional heap - heap max 2048mb reached during nightly batch job"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "memory_error",
+      "root_cause_keywords": [
+        "heap",
+        "out of memory",
+        "java"
+      ]
+    }
+  },
+  {
+    "id": "triage-092",
+    "name": "Card declined and insufficient funds errors — variant 1",
+    "source": "payment-service",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CardDeclinedError: issuer rejected the card authorization - do_not_honor response from issuing bank"
+      },
+      {
+        "level": "ERROR",
+        "message": "InsufficientFundsException: insufficient_funds - payment processing failed for order 88252"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "payment_failed",
+      "root_cause_keywords": [
+        "card declined",
+        "insufficient funds",
+        "payment"
+      ]
+    }
+  },
+  {
+    "id": "triage-093",
+    "name": "DB pool exhausted on orders service — variant 1",
+    "source": "order-processing-api",
+    "environment": "prod",
+    "count": 8,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ConnectionPoolExhaustedError: connection pool has no free slots - orders-api requests queued for >45s"
+      },
+      {
+        "level": "ERROR",
+        "message": "ConnectionPoolExhaustedError: All 78 connections in use - connection capacity exhausted, requests failing"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "db_connection_pool_exhausted",
+      "root_cause_keywords": [
+        "connection pool",
+        "pool exhausted"
+      ]
+    }
+  },
+  {
+    "id": "triage-094",
+    "name": "Worker node OOM killed — variant 1",
+    "source": "worker-platform",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "OOMKilled: Container worker-node-3f2a exceeded memory limit and was terminated by the node OOM killer"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "kubernetes_oom_kill",
+      "root_cause_keywords": [
+        "oom",
+        "memory limit",
+        "killed"
+      ]
+    }
+  },
+  {
+    "id": "triage-095",
+    "name": "Cache stampede on user profile key — variant 1",
+    "source": "user-cache",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CacheStampedeDetected: Cache miss storm on key 'user-profile' - 515 concurrent database lookups"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "cache_stampede",
+      "root_cause_keywords": [
+        "cache stampede",
+        "cache miss",
+        "simultaneous db queries"
+      ]
+    }
+  },
+  {
+    "id": "triage-096",
+    "name": "XSS payload blocked in comment field — variant 1",
+    "source": "edge-security",
+    "environment": "prod",
+    "count": 13,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "SecurityAlert: cross-site scripting pattern detected in comment field - sanitization applied"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "security_alerts",
+      "root_cause_keywords": [
+        "xss",
+        "payload",
+        "sanitization"
+      ]
+    }
+  },
+  {
+    "id": "triage-097",
+    "name": "Inventory service circuit breaker opened — variant 1",
+    "source": "api-gateway",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ServiceUnavailableError: inventory-service responded with HTTP 517 after 3 retries - circuit breaker transitioned to open"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "service_unavailable",
+      "root_cause_keywords": [
+        "service unavailable",
+        "503",
+        "circuit breaker"
+      ]
+    }
+  },
+  {
+    "id": "triage-098",
+    "name": "Elasticsearch shard failure on orders index — variant 1",
+    "source": "query-api",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ShardFailureException: primary search shard for index 'orders-v2' unavailable - search results degraded"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "elasticsearch_shard_failure",
+      "root_cause_keywords": [
+        "shard",
+        "elasticsearch",
+        "search"
+      ]
+    }
+  },
+  {
+    "id": "triage-099",
+    "name": "SMS queue backlog critical — variant 1",
+    "source": "notification-service",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "QueueDepthCritical: sms-queue has 45028 pending messages - consumer delay continues to increase"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "message_queue",
+      "root_cause_keywords": [
+        "queue",
+        "consumer lag",
+        "backlog"
+      ]
+    }
+  },
+  {
+    "id": "triage-100",
+    "name": "Data volume disk critical — variant 1",
+    "source": "platform-scheduler",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "CRITICAL",
+        "message": "DiskSpaceCritical: /data is 130% full - writes are at risk of failing"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "disk_space",
+      "root_cause_keywords": [
+        "disk space",
+        "disk full",
+        "write operations"
+      ]
+    }
+  },
+  {
+    "id": "triage-101",
+    "name": "DB pool exhausted during checkout — variant 2",
+    "source": "purchase-service",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ConnectionPoolExhaustedError: All 27 connections in use - requests waiting beyond the configured timeout"
+      },
+      {
+        "level": "ERROR",
+        "message": "ConnectionPoolExhaustedError: connection pool has no free slots - pool exhausted, requests failing"
+      },
+      {
+        "level": "ERROR",
+        "message": "PaymentGatewayTimeout: payment provider exceeded the gateway response deadline - no DB connection available to log transaction"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "db_connection_pool_exhausted",
+      "root_cause_keywords": [
+        "connection pool",
+        "pool exhausted"
+      ]
+    }
+  },
+  {
+    "id": "triage-102",
+    "name": "Container OOM killed by Kubernetes — variant 2",
+    "source": "runtime-platform",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "OOMKilled: Container api-server-7d9f crossed the container memory ceiling and was terminated by the node OOM killer"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "kubernetes_oom_kill",
+      "root_cause_keywords": [
+        "oom",
+        "memory limit",
+        "killed"
+      ]
+    }
+  },
+  {
+    "id": "triage-103",
+    "name": "Expected JWT expiry noise — variant 2",
+    "source": "login-service",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "TokenExpiredError: session token is past its expiry at 30:36:22 - interactive login required again"
+      },
+      {
+        "level": "WARN",
+        "message": "TokenExpiredError: session token is past its expiry at 37:44:40 - user forced to re-login"
+      }
+    ],
+    "expected": {
+      "severity": "low",
+      "disposition": "NO_ACTION",
+      "runbook_id": "token_expired_noise",
+      "root_cause_keywords": [
+        "token expiry",
+        "jwt expired",
+        "session churn"
+      ]
+    }
+  },
+  {
+    "id": "triage-104",
+    "name": "Malformed CSV import rows — variant 2",
+    "source": "data-import-service",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CSVParseError: invalid record shape at line 409 - field count does not match the CSV header"
+      },
+      {
+        "level": "ERROR",
+        "message": "CSVParseError: invalid record shape at line 437 - unexpected column count"
+      }
+    ],
+    "expected": {
+      "severity": "low",
+      "disposition": "OBSERVE",
+      "runbook_id": "csv_parse_error",
+      "root_cause_keywords": [
+        "csv",
+        "malformed row",
+        "column count"
+      ]
+    }
+  },
+  {
+    "id": "triage-105",
+    "name": "Feature flag service timeout — variant 2",
+    "source": "flag-evaluator",
+    "environment": "prod",
+    "count": 7,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "FeatureFlagTimeout: Failed to evaluate flag 'checkout-v2' - defaulting to off, flag backend could not be contacted"
+      },
+      {
+        "level": "ERROR",
+        "message": "FeatureFlagTimeout: Failed to evaluate flag 'new-pricing-engine' - defaulting to off, service unreachable"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "feature_flag_timeout",
+      "root_cause_keywords": [
+        "feature flag",
+        "flag service",
+        "service unreachable"
+      ]
+    }
+  },
+  {
+    "id": "triage-106",
+    "name": "Session store unavailable — variant 2",
+    "source": "login-service",
+    "environment": "prod",
+    "count": 2,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "SessionStoreError: session persistence backend is unavailable - falling back to stateless mode"
+      },
+      {
+        "level": "ERROR",
+        "message": "InvalidSignatureError: JWT token signature could not be verified - session store unavailable, token cannot be re-validated"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "session_store",
+      "root_cause_keywords": [
+        "session store",
+        "redis",
+        "stateless"
+      ]
+    }
+  },
+  {
+    "id": "triage-107",
+    "name": "Brute force login attack — variant 2",
+    "source": "edge-security",
+    "environment": "prod",
+    "count": 11,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "BruteForceDetected: 334 failed attempts on /api/login in 60s"
+      },
+      {
+        "level": "ERROR",
+        "message": "SecurityAlert: SQL injection pattern detected in request - query blocked and IP flagged"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "security_alerts",
+      "root_cause_keywords": [
+        "brute force",
+        "attack",
+        "failed attempts"
+      ]
+    }
+  },
+  {
+    "id": "triage-108",
+    "name": "Payment gateway timeout — variant 2",
+    "source": "checkout-worker",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "PaymentGatewayTimeout: payment provider exceeded the gateway response deadline - transaction aborted"
+      },
+      {
+        "level": "ERROR",
+        "message": "PaymentGatewayTimeout: gateway vendor did not respond within 15s - duplicate retries suppressed"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "payment_gateway",
+      "root_cause_keywords": [
+        "payment gateway",
+        "stripe",
+        "timeout"
+      ]
+    }
+  },
+  {
+    "id": "triage-109",
+    "name": "Input validation failures — variant 2",
+    "source": "profile-api",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "ValidationError: Field 'email' failed input contract validation - request payload refused"
+      },
+      {
+        "level": "WARN",
+        "message": "ValidationError: Field 'phone_number' failed input contract validation - data rejected"
+      }
+    ],
+    "expected": {
+      "severity": "low",
+      "disposition": "OBSERVE",
+      "runbook_id": "data_validation",
+      "root_cause_keywords": [
+        "validation",
+        "schema",
+        "data rejected"
+      ]
+    }
+  },
+  {
+    "id": "triage-110",
+    "name": "Object storage upload failures — variant 2",
+    "source": "attachments-api",
+    "environment": "prod",
+    "count": 10,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "FileUploadError: object persistence failed for .pdf to object storage - S3 returned 535"
+      },
+      {
+        "level": "ERROR",
+        "message": "FileUploadError: Failed to write .csv to object storage - S3 returned 507"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "file_upload",
+      "root_cause_keywords": [
+        "s3",
+        "object storage",
+        "upload"
+      ]
+    }
+  },
+  {
+    "id": "triage-111",
+    "name": "Database disk almost full — variant 2",
+    "source": "platform-scheduler",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "CRITICAL",
+        "message": "DiskSpaceCritical: /var/lib/postgresql is 105% full - writes are at risk of failing"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "disk_space",
+      "root_cause_keywords": [
+        "disk space",
+        "disk full",
+        "write operations"
+      ]
+    }
+  },
+  {
+    "id": "triage-112",
+    "name": "Cache stampede overload — variant 2",
+    "source": "query-cache",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CacheStampedeDetected: Cache miss storm on key 'product-catalog' - 334 concurrent database lookups"
+      },
+      {
+        "level": "ERROR",
+        "message": "DatabaseConnectionError: database connection attempt timed out to db-analytics-3:5453"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "cache_stampede",
+      "root_cause_keywords": [
+        "cache stampede",
+        "cache miss",
+        "simultaneous db queries"
+      ]
+    }
+  },
+  {
+    "id": "triage-113",
+    "name": "WebSocket instability — variant 2",
+    "source": "session-stream",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "WebSocketError: Connection dropped for user 12909 - reason: ping timeout"
+      },
+      {
+        "level": "WARN",
+        "message": "WebSocketError: socket disconnected unexpectedly for user 23916 - reason: transport close"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "OBSERVE",
+      "runbook_id": "websocket_connection_dropped",
+      "root_cause_keywords": [
+        "websocket",
+        "connection dropped",
+        "ping timeout"
+      ]
+    }
+  },
+  {
+    "id": "triage-114",
+    "name": "External API schema changed — variant 2",
+    "source": "partner-worker",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "SchemaMismatchError: Salesforce API response contract no longer matches - expected field missing in response"
+      },
+      {
+        "level": "ERROR",
+        "message": "SchemaMismatchError: HubSpot API response shape changed - expected field missing in response"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "api_schema_mismatch",
+      "root_cause_keywords": [
+        "schema",
+        "api response",
+        "expected field"
+      ]
+    }
+  },
+  {
+    "id": "triage-115",
+    "name": "Downstream service unavailable — variant 2",
+    "source": "service-router",
+    "environment": "prod",
+    "count": 9,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ServiceUnavailableError: recommendation-engine responded with HTTP 538 after 3 retries - circuit breaker transitioned to open"
+      },
+      {
+        "level": "ERROR",
+        "message": "ServiceUnavailableError: search-service returned 510 after 3 retries - circuit breaker transitioned to open"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "service_unavailable",
+      "root_cause_keywords": [
+        "service unavailable",
+        "503",
+        "circuit breaker"
+      ]
+    }
+  },
+  {
+    "id": "triage-116",
+    "name": "Message queue backlog — variant 2",
+    "source": "notification-service",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "QueueDepthCritical: email-queue has 88007 pending messages - consumer delay continues to increase"
+      },
+      {
+        "level": "ERROR",
+        "message": "QueueDepthCritical: webhook-queue has 91014 pending messages - consumer lag growing"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "message_queue",
+      "root_cause_keywords": [
+        "queue",
+        "consumer lag",
+        "backlog"
+      ]
+    }
+  },
+  {
+    "id": "triage-117",
+    "name": "Elasticsearch primary shard unavailable — variant 2",
+    "source": "catalog-search",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ShardFailureException: primary search shard for index 'products-v3' unavailable - search results degraded"
+      },
+      {
+        "level": "ERROR",
+        "message": "SearchTimeout: product search exceeded 5s timeout while primary search shard unavailable"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "elasticsearch_shard_failure",
+      "root_cause_keywords": [
+        "shard",
+        "elasticsearch",
+        "search"
+      ]
+    }
+  },
+  {
+    "id": "triage-118",
+    "name": "CDN cannot reach origin — variant 2",
+    "source": "web-edge",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CDNOriginError: Origin pull failed for /static/js/main.chunk.js - 523 from origin, serving stale cache"
+      },
+      {
+        "level": "ERROR",
+        "message": "CDNOriginError: edge fetch from origin failed for /static/css/app.css - 530 from origin, serving stale cache"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "cdn_origin_pull_failed",
+      "root_cause_keywords": [
+        "cdn",
+        "origin",
+        "stale cache"
+      ]
+    }
+  },
+  {
+    "id": "triage-119",
+    "name": "gRPC deadline exceeded — variant 2",
+    "source": "shipping-service",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "DeadlineExceeded: gRPC call to inventory-grpc timed out after 5000ms - context cancelled by client"
+      },
+      {
+        "level": "ERROR",
+        "message": "DeadlineExceeded: gRPC call to shipping-grpc timed out after 5000ms - context cancelled by client"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "grpc_deadline_exceeded",
+      "root_cause_keywords": [
+        "grpc",
+        "deadline exceeded",
+        "timeout"
+      ]
+    }
+  },
+  {
+    "id": "triage-120",
+    "name": "Database deadlock — variant 2",
+    "source": "order-service",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "DeadlockException: database detected a transactional deadlock on table 'orders' - rolled back"
+      },
+      {
+        "level": "ERROR",
+        "message": "DeadlockException: Transaction deadlock detected on table 'payments' - rolled back"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "db_deadlock",
+      "root_cause_keywords": [
+        "deadlock",
+        "transaction",
+        "rolled back"
+      ]
+    }
+  },
+  {
+    "id": "triage-121",
+    "name": "Database replication lag — variant 2",
+    "source": "analytics-service",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "ReplicationLagWarning: read replica is significantly behind the writer - read consistency degraded"
+      },
+      {
+        "level": "WARN",
+        "message": "ReplicationLagWarning: read replica is significantly behind the writer - read consistency degraded"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "OBSERVE",
+      "runbook_id": "db_replication_lag",
+      "root_cause_keywords": [
+        "replication lag",
+        "replica",
+        "read consistency"
+      ]
+    }
+  },
+  {
+    "id": "triage-122",
+    "name": "Duplicate payment request blocked — variant 2",
+    "source": "transaction-api",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "IdempotencyViolation: Duplicate payment request detected - second charge blocked"
+      },
+      {
+        "level": "ERROR",
+        "message": "IdempotencyViolation: Duplicate request detected - idempotency key replayed"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "idempotency_violation",
+      "root_cause_keywords": [
+        "idempotency",
+        "duplicate payment",
+        "duplicate request"
+      ]
+    }
+  },
+  {
+    "id": "triage-123",
+    "name": "Fraud detection alert — variant 2",
+    "source": "fraud-service",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "FraudDetectionAlert: Transaction flagged by risk engine - risk score crossed the configured threshold"
+      },
+      {
+        "level": "ERROR",
+        "message": "FraudDetectionAlert: Transaction flagged by risk engine - score exceeded threshold"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "payment_fraud",
+      "root_cause_keywords": [
+        "fraud",
+        "risk engine",
+        "score"
+      ]
+    }
+  },
+  {
+    "id": "triage-124",
+    "name": "Uploaded temp file missing — variant 2",
+    "source": "attachment-worker",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "FileNotFoundError: temporary upload file is missing at /tmp/upload_3842 - no such file or directory"
+      },
+      {
+        "level": "WARN",
+        "message": "FileNotFoundError: temporary upload file is missing at /tmp/upload_4911 - no such file or directory"
+      }
+    ],
+    "expected": {
+      "severity": "low",
+      "disposition": "OBSERVE",
+      "runbook_id": "file_not_found",
+      "root_cause_keywords": [
+        "file not found",
+        "tmp",
+        "upload"
+      ]
+    }
+  },
+  {
+    "id": "triage-125",
+    "name": "Redis cache connection failures — variant 2",
+    "source": "session-cache-client",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "Redis connection failed: connection refused at cache-primary:6414"
+      },
+      {
+        "level": "ERROR",
+        "message": "Redis timeout while reading key user-permissions"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "OBSERVE",
+      "runbook_id": "redis_connection",
+      "root_cause_keywords": [
+        "redis",
+        "connection",
+        "timeout"
+      ]
+    }
+  },
+  {
+    "id": "triage-126",
+    "name": "Memory pressure before OOM — variant 2",
+    "source": "invoice-worker",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "MemoryPressureWarning: Heap at 90% - GC pause times exceeding 500ms"
+      },
+      {
+        "level": "WARN",
+        "message": "MemoryPressureWarning: heap utilization is above the warning threshold - GC frequency increasing"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "OBSERVE",
+      "runbook_id": "memory_pressure",
+      "root_cause_keywords": [
+        "memory pressure",
+        "heap",
+        "gc"
+      ]
+    }
+  },
+  {
+    "id": "triage-127",
+    "name": "Stack overflow runtime failure — variant 2",
+    "source": "document-parser",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "CRITICAL",
+        "message": "StackOverflowError: recursive call depth limit reached in RecursiveResolver - possible circular reference"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "stack_overflow",
+      "root_cause_keywords": [
+        "stack overflow",
+        "maximum call depth",
+        "circular reference"
+      ]
+    }
+  },
+  {
+    "id": "triage-128",
+    "name": "Database connection timeout — variant 2",
+    "source": "purchase-service",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "Database connection timeout: DatabaseConnectionError: database connection attempt timed out to db-primary-1:5453 - could not connect to database"
+      },
+      {
+        "level": "ERROR",
+        "message": "Database connection timeout: DatabaseConnectionError: database connection attempt timed out to db-replica-2:5460 - could not connect to database"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "db_connection_timeout",
+      "root_cause_keywords": [
+        "database",
+        "connection timeout",
+        "db"
+      ]
+    }
+  },
+  {
+    "id": "triage-129",
+    "name": "Null pointer exception in order processing — variant 2",
+    "source": "order-service",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "NullPointerException: unexpected null reference in OrderProcessor.calculateTotal() - request returned 528"
+      },
+      {
+        "level": "ERROR",
+        "message": "NullPointerException: null object dereference propagated to global handler"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "application_exceptions",
+      "root_cause_keywords": [
+        "null reference",
+        "exception",
+        "500"
+      ]
+    }
+  },
+  {
+    "id": "triage-130",
+    "name": "JWT tampering and login rate limit hit — variant 2",
+    "source": "login-service",
+    "environment": "prod",
+    "count": 10,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "InvalidSignatureError: JWT token signature could not be verified for user session - possible token tampering detected"
+      },
+      {
+        "level": "ERROR",
+        "message": "RateLimitExceeded: too many login attempts from IP 210.0.120.51 - blocked for 22 minutes"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "auth_errors",
+      "root_cause_keywords": [
+        "signature",
+        "tampering",
+        "rate limit"
+      ]
+    }
+  },
+  {
+    "id": "triage-131",
+    "name": "JVM heap exhausted during batch job — variant 2",
+    "source": "batch-service",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "CRITICAL",
+        "message": "OutOfMemoryError: JVM cannot allocate additional heap - heap max 2048mb reached during nightly batch job"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "memory_error",
+      "root_cause_keywords": [
+        "heap",
+        "out of memory",
+        "java"
+      ]
+    }
+  },
+  {
+    "id": "triage-132",
+    "name": "Card declined and insufficient funds errors — variant 2",
+    "source": "billing-api",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CardDeclinedError: issuer rejected the card authorization - do_not_honor response from issuing bank"
+      },
+      {
+        "level": "ERROR",
+        "message": "InsufficientFundsException: insufficient_funds - payment processing failed for order 88252"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "payment_failed",
+      "root_cause_keywords": [
+        "card declined",
+        "insufficient funds",
+        "payment"
+      ]
+    }
+  },
+  {
+    "id": "triage-133",
+    "name": "DB pool exhausted on orders service — variant 2",
+    "source": "orders-worker",
+    "environment": "prod",
+    "count": 8,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ConnectionPoolExhaustedError: connection pool has no free slots - orders-api requests queued for >45s"
+      },
+      {
+        "level": "ERROR",
+        "message": "ConnectionPoolExhaustedError: All 78 connections in use - connection capacity exhausted, requests failing"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "db_connection_pool_exhausted",
+      "root_cause_keywords": [
+        "connection pool",
+        "pool exhausted"
+      ]
+    }
+  },
+  {
+    "id": "triage-134",
+    "name": "Worker node OOM killed — variant 2",
+    "source": "compute-workers",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "OOMKilled: Container worker-node-3f2a exceeded memory limit and was terminated by the node OOM killer"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "kubernetes_oom_kill",
+      "root_cause_keywords": [
+        "oom",
+        "memory limit",
+        "killed"
+      ]
+    }
+  },
+  {
+    "id": "triage-135",
+    "name": "Cache stampede on user profile key — variant 2",
+    "source": "account-cache",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CacheStampedeDetected: Cache miss storm on key 'user-profile' - 515 concurrent database lookups"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "cache_stampede",
+      "root_cause_keywords": [
+        "cache stampede",
+        "cache miss",
+        "simultaneous db queries"
+      ]
+    }
+  },
+  {
+    "id": "triage-136",
+    "name": "XSS payload blocked in comment field — variant 2",
+    "source": "security-proxy",
+    "environment": "prod",
+    "count": 13,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "SecurityAlert: cross-site scripting pattern detected in comment field - sanitization applied"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "security_alerts",
+      "root_cause_keywords": [
+        "xss",
+        "payload",
+        "sanitization"
+      ]
+    }
+  },
+  {
+    "id": "triage-137",
+    "name": "Inventory service circuit breaker opened — variant 2",
+    "source": "traffic-gateway",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ServiceUnavailableError: inventory-service responded with HTTP 517 after 3 retries - circuit breaker transitioned to open"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "service_unavailable",
+      "root_cause_keywords": [
+        "service unavailable",
+        "503",
+        "circuit breaker"
+      ]
+    }
+  },
+  {
+    "id": "triage-138",
+    "name": "Elasticsearch shard failure on orders index — variant 2",
+    "source": "catalog-search",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ShardFailureException: primary search shard for index 'orders-v2' unavailable - search results degraded"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "elasticsearch_shard_failure",
+      "root_cause_keywords": [
+        "shard",
+        "elasticsearch",
+        "search"
+      ]
+    }
+  },
+  {
+    "id": "triage-139",
+    "name": "SMS queue backlog critical — variant 2",
+    "source": "messaging-worker",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "QueueDepthCritical: sms-queue has 45028 pending messages - consumer delay continues to increase"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "message_queue",
+      "root_cause_keywords": [
+        "queue",
+        "consumer lag",
+        "backlog"
+      ]
+    }
+  },
+  {
+    "id": "triage-140",
+    "name": "Data volume disk critical — variant 2",
+    "source": "ops-scheduler",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "CRITICAL",
+        "message": "DiskSpaceCritical: /data is 130% full - writes are at risk of failing"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "disk_space",
+      "root_cause_keywords": [
+        "disk space",
+        "disk full",
+        "write operations"
+      ]
+    }
+  },
+  {
+    "id": "triage-141",
+    "name": "DB pool exhausted during checkout — variant 3",
+    "source": "cart-api",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ConnectionPoolExhaustedError: All 27 connections in use - requests waiting beyond the configured timeout"
+      },
+      {
+        "level": "ERROR",
+        "message": "ConnectionPoolExhaustedError: connection pool has no free slots - pool exhausted, requests failing"
+      },
+      {
+        "level": "ERROR",
+        "message": "PaymentGatewayTimeout: payment provider exceeded the gateway response deadline - no DB connection available to log transaction"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "db_connection_pool_exhausted",
+      "root_cause_keywords": [
+        "connection pool",
+        "pool exhausted"
+      ]
+    }
+  },
+  {
+    "id": "triage-142",
+    "name": "Container OOM killed by Kubernetes — variant 3",
+    "source": "compute-platform",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "OOMKilled: Container api-server-7d9f crossed the container memory ceiling and was terminated by the node OOM killer"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "kubernetes_oom_kill",
+      "root_cause_keywords": [
+        "oom",
+        "memory limit",
+        "killed"
+      ]
+    }
+  },
+  {
+    "id": "triage-143",
+    "name": "Expected JWT expiry noise — variant 3",
+    "source": "identity-api",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "TokenExpiredError: session token is past its expiry at 30:36:22 - interactive login required again"
+      },
+      {
+        "level": "WARN",
+        "message": "TokenExpiredError: session token is past its expiry at 37:44:40 - user forced to re-login"
+      }
+    ],
+    "expected": {
+      "severity": "low",
+      "disposition": "NO_ACTION",
+      "runbook_id": "token_expired_noise",
+      "root_cause_keywords": [
+        "token expiry",
+        "jwt expired",
+        "session churn"
+      ]
+    }
+  },
+  {
+    "id": "triage-144",
+    "name": "Malformed CSV import rows — variant 3",
+    "source": "ingestion-worker",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CSVParseError: invalid record shape at line 409 - field count does not match the CSV header"
+      },
+      {
+        "level": "ERROR",
+        "message": "CSVParseError: invalid record shape at line 437 - unexpected column count"
+      }
+    ],
+    "expected": {
+      "severity": "low",
+      "disposition": "OBSERVE",
+      "runbook_id": "csv_parse_error",
+      "root_cause_keywords": [
+        "csv",
+        "malformed row",
+        "column count"
+      ]
+    }
+  },
+  {
+    "id": "triage-145",
+    "name": "Feature flag service timeout — variant 3",
+    "source": "experimentation-api",
+    "environment": "prod",
+    "count": 7,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "FeatureFlagTimeout: Failed to evaluate flag 'checkout-v2' - defaulting to off, flag backend could not be contacted"
+      },
+      {
+        "level": "ERROR",
+        "message": "FeatureFlagTimeout: Failed to evaluate flag 'new-pricing-engine' - defaulting to off, service unreachable"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "feature_flag_timeout",
+      "root_cause_keywords": [
+        "feature flag",
+        "flag service",
+        "service unreachable"
+      ]
+    }
+  },
+  {
+    "id": "triage-146",
+    "name": "Session store unavailable — variant 3",
+    "source": "identity-api",
+    "environment": "prod",
+    "count": 2,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "SessionStoreError: session persistence backend is unavailable - falling back to stateless mode"
+      },
+      {
+        "level": "ERROR",
+        "message": "InvalidSignatureError: JWT token signature could not be verified - session store unavailable, token cannot be re-validated"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "session_store",
+      "root_cause_keywords": [
+        "session store",
+        "redis",
+        "stateless"
+      ]
+    }
+  },
+  {
+    "id": "triage-147",
+    "name": "Brute force login attack — variant 3",
+    "source": "security-proxy",
+    "environment": "prod",
+    "count": 11,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "BruteForceDetected: 334 failed attempts on /api/login in 60s"
+      },
+      {
+        "level": "ERROR",
+        "message": "SecurityAlert: SQL injection pattern detected in request - query blocked and IP flagged"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "security_alerts",
+      "root_cause_keywords": [
+        "brute force",
+        "attack",
+        "failed attempts"
+      ]
+    }
+  },
+  {
+    "id": "triage-148",
+    "name": "Payment gateway timeout — variant 3",
+    "source": "purchase-service",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "PaymentGatewayTimeout: payment provider exceeded the gateway response deadline - transaction aborted"
+      },
+      {
+        "level": "ERROR",
+        "message": "PaymentGatewayTimeout: gateway vendor did not respond within 15s - duplicate retries suppressed"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "payment_gateway",
+      "root_cause_keywords": [
+        "payment gateway",
+        "stripe",
+        "timeout"
+      ]
+    }
+  },
+  {
+    "id": "triage-149",
+    "name": "Input validation failures — variant 3",
+    "source": "profile-api",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "ValidationError: Field 'email' failed input contract validation - request payload refused"
+      },
+      {
+        "level": "WARN",
+        "message": "ValidationError: Field 'phone_number' failed input contract validation - data rejected"
+      }
+    ],
+    "expected": {
+      "severity": "low",
+      "disposition": "OBSERVE",
+      "runbook_id": "data_validation",
+      "root_cause_keywords": [
+        "validation",
+        "schema",
+        "data rejected"
+      ]
+    }
+  },
+  {
+    "id": "triage-150",
+    "name": "Object storage upload failures — variant 3",
+    "source": "object-upload-service",
+    "environment": "prod",
+    "count": 10,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "FileUploadError: object persistence failed for .pdf to object storage - S3 returned 535"
+      },
+      {
+        "level": "ERROR",
+        "message": "FileUploadError: Failed to write .csv to object storage - S3 returned 507"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "file_upload",
+      "root_cause_keywords": [
+        "s3",
+        "object storage",
+        "upload"
+      ]
+    }
+  },
+  {
+    "id": "triage-151",
+    "name": "Database disk almost full — variant 3",
+    "source": "ops-scheduler",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "CRITICAL",
+        "message": "DiskSpaceCritical: /var/lib/postgresql is 105% full - writes are at risk of failing"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "disk_space",
+      "root_cause_keywords": [
+        "disk space",
+        "disk full",
+        "write operations"
+      ]
+    }
+  },
+  {
+    "id": "triage-152",
+    "name": "Cache stampede overload — variant 3",
+    "source": "catalog-cache",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CacheStampedeDetected: Cache miss storm on key 'product-catalog' - 334 concurrent database lookups"
+      },
+      {
+        "level": "ERROR",
+        "message": "DatabaseConnectionError: database connection attempt timed out to db-analytics-3:5453"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "cache_stampede",
+      "root_cause_keywords": [
+        "cache stampede",
+        "cache miss",
+        "simultaneous db queries"
+      ]
+    }
+  },
+  {
+    "id": "triage-153",
+    "name": "WebSocket instability — variant 3",
+    "source": "socket-service",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "WebSocketError: Connection dropped for user 12909 - reason: ping timeout"
+      },
+      {
+        "level": "WARN",
+        "message": "WebSocketError: socket disconnected unexpectedly for user 23916 - reason: transport close"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "OBSERVE",
+      "runbook_id": "websocket_connection_dropped",
+      "root_cause_keywords": [
+        "websocket",
+        "connection dropped",
+        "ping timeout"
+      ]
+    }
+  },
+  {
+    "id": "triage-154",
+    "name": "External API schema changed — variant 3",
+    "source": "sync-worker",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "SchemaMismatchError: Salesforce API response contract no longer matches - expected field missing in response"
+      },
+      {
+        "level": "ERROR",
+        "message": "SchemaMismatchError: HubSpot API response shape changed - expected field missing in response"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "api_schema_mismatch",
+      "root_cause_keywords": [
+        "schema",
+        "api response",
+        "expected field"
+      ]
+    }
+  },
+  {
+    "id": "triage-155",
+    "name": "Downstream service unavailable — variant 3",
+    "source": "api-gateway",
+    "environment": "prod",
+    "count": 9,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ServiceUnavailableError: recommendation-engine responded with HTTP 538 after 3 retries - circuit breaker transitioned to open"
+      },
+      {
+        "level": "ERROR",
+        "message": "ServiceUnavailableError: search-service returned 510 after 3 retries - circuit breaker transitioned to open"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "service_unavailable",
+      "root_cause_keywords": [
+        "service unavailable",
+        "503",
+        "circuit breaker"
+      ]
+    }
+  },
+  {
+    "id": "triage-156",
+    "name": "Message queue backlog — variant 3",
+    "source": "messaging-worker",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "QueueDepthCritical: email-queue has 88007 pending messages - consumer delay continues to increase"
+      },
+      {
+        "level": "ERROR",
+        "message": "QueueDepthCritical: webhook-queue has 91014 pending messages - consumer lag growing"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "message_queue",
+      "root_cause_keywords": [
+        "queue",
+        "consumer lag",
+        "backlog"
+      ]
+    }
+  },
+  {
+    "id": "triage-157",
+    "name": "Elasticsearch primary shard unavailable — variant 3",
+    "source": "search-service",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ShardFailureException: primary search shard for index 'products-v3' unavailable - search results degraded"
+      },
+      {
+        "level": "ERROR",
+        "message": "SearchTimeout: product search exceeded 5s timeout while primary search shard unavailable"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "elasticsearch_shard_failure",
+      "root_cause_keywords": [
+        "shard",
+        "elasticsearch",
+        "search"
+      ]
+    }
+  },
+  {
+    "id": "triage-158",
+    "name": "CDN cannot reach origin — variant 3",
+    "source": "cdn-gateway",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CDNOriginError: Origin pull failed for /static/js/main.chunk.js - 523 from origin, serving stale cache"
+      },
+      {
+        "level": "ERROR",
+        "message": "CDNOriginError: edge fetch from origin failed for /static/css/app.css - 530 from origin, serving stale cache"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "cdn_origin_pull_failed",
+      "root_cause_keywords": [
+        "cdn",
+        "origin",
+        "stale cache"
+      ]
+    }
+  },
+  {
+    "id": "triage-159",
+    "name": "gRPC deadline exceeded — variant 3",
+    "source": "delivery-api",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "DeadlineExceeded: gRPC call to inventory-grpc timed out after 5000ms - context cancelled by client"
+      },
+      {
+        "level": "ERROR",
+        "message": "DeadlineExceeded: gRPC call to shipping-grpc timed out after 5000ms - context cancelled by client"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "grpc_deadline_exceeded",
+      "root_cause_keywords": [
+        "grpc",
+        "deadline exceeded",
+        "timeout"
+      ]
+    }
+  },
+  {
+    "id": "triage-160",
+    "name": "Database deadlock — variant 3",
+    "source": "order-processing-api",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "DeadlockException: database detected a transactional deadlock on table 'orders' - rolled back"
+      },
+      {
+        "level": "ERROR",
+        "message": "DeadlockException: Transaction deadlock detected on table 'payments' - rolled back"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "db_deadlock",
+      "root_cause_keywords": [
+        "deadlock",
+        "transaction",
+        "rolled back"
+      ]
+    }
+  },
+  {
+    "id": "triage-161",
+    "name": "Database replication lag — variant 3",
+    "source": "reporting-api",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "ReplicationLagWarning: read replica is significantly behind the writer - read consistency degraded"
+      },
+      {
+        "level": "WARN",
+        "message": "ReplicationLagWarning: read replica is significantly behind the writer - read consistency degraded"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "OBSERVE",
+      "runbook_id": "db_replication_lag",
+      "root_cause_keywords": [
+        "replication lag",
+        "replica",
+        "read consistency"
+      ]
+    }
+  },
+  {
+    "id": "triage-162",
+    "name": "Duplicate payment request blocked — variant 3",
+    "source": "payment-service",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "IdempotencyViolation: Duplicate payment request detected - second charge blocked"
+      },
+      {
+        "level": "ERROR",
+        "message": "IdempotencyViolation: Duplicate request detected - idempotency key replayed"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "idempotency_violation",
+      "root_cause_keywords": [
+        "idempotency",
+        "duplicate payment",
+        "duplicate request"
+      ]
+    }
+  },
+  {
+    "id": "triage-163",
+    "name": "Fraud detection alert — variant 3",
+    "source": "transaction-risk",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "FraudDetectionAlert: Transaction flagged by risk engine - risk score crossed the configured threshold"
+      },
+      {
+        "level": "ERROR",
+        "message": "FraudDetectionAlert: Transaction flagged by risk engine - score exceeded threshold"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "payment_fraud",
+      "root_cause_keywords": [
+        "fraud",
+        "risk engine",
+        "score"
+      ]
+    }
+  },
+  {
+    "id": "triage-164",
+    "name": "Uploaded temp file missing — variant 3",
+    "source": "media-worker",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "FileNotFoundError: temporary upload file is missing at /tmp/upload_3842 - no such file or directory"
+      },
+      {
+        "level": "WARN",
+        "message": "FileNotFoundError: temporary upload file is missing at /tmp/upload_4911 - no such file or directory"
+      }
+    ],
+    "expected": {
+      "severity": "low",
+      "disposition": "OBSERVE",
+      "runbook_id": "file_not_found",
+      "root_cause_keywords": [
+        "file not found",
+        "tmp",
+        "upload"
+      ]
+    }
+  },
+  {
+    "id": "triage-165",
+    "name": "Redis cache connection failures — variant 3",
+    "source": "redis-client",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "Redis connection failed: connection refused at cache-primary:6414"
+      },
+      {
+        "level": "ERROR",
+        "message": "Redis timeout while reading key user-permissions"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "OBSERVE",
+      "runbook_id": "redis_connection",
+      "root_cause_keywords": [
+        "redis",
+        "connection",
+        "timeout"
+      ]
+    }
+  },
+  {
+    "id": "triage-166",
+    "name": "Memory pressure before OOM — variant 3",
+    "source": "settlement-worker",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "MemoryPressureWarning: Heap at 90% - GC pause times exceeding 500ms"
+      },
+      {
+        "level": "WARN",
+        "message": "MemoryPressureWarning: heap utilization is above the warning threshold - GC frequency increasing"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "OBSERVE",
+      "runbook_id": "memory_pressure",
+      "root_cause_keywords": [
+        "memory pressure",
+        "heap",
+        "gc"
+      ]
+    }
+  },
+  {
+    "id": "triage-167",
+    "name": "Stack overflow runtime failure — variant 3",
+    "source": "resolver-service",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "CRITICAL",
+        "message": "StackOverflowError: recursive call depth limit reached in RecursiveResolver - possible circular reference"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "stack_overflow",
+      "root_cause_keywords": [
+        "stack overflow",
+        "maximum call depth",
+        "circular reference"
+      ]
+    }
+  },
+  {
+    "id": "triage-168",
+    "name": "Database connection timeout — variant 3",
+    "source": "cart-api",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "Database connection timeout: DatabaseConnectionError: database connection attempt timed out to db-primary-1:5453 - could not connect to database"
+      },
+      {
+        "level": "ERROR",
+        "message": "Database connection timeout: DatabaseConnectionError: database connection attempt timed out to db-replica-2:5460 - could not connect to database"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "db_connection_timeout",
+      "root_cause_keywords": [
+        "database",
+        "connection timeout",
+        "db"
+      ]
+    }
+  },
+  {
+    "id": "triage-169",
+    "name": "Null pointer exception in order processing — variant 3",
+    "source": "order-processing-api",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "NullPointerException: unexpected null reference in OrderProcessor.calculateTotal() - request returned 528"
+      },
+      {
+        "level": "ERROR",
+        "message": "NullPointerException: null object dereference propagated to global handler"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "application_exceptions",
+      "root_cause_keywords": [
+        "null reference",
+        "exception",
+        "500"
+      ]
+    }
+  },
+  {
+    "id": "triage-170",
+    "name": "JWT tampering and login rate limit hit — variant 3",
+    "source": "identity-api",
+    "environment": "prod",
+    "count": 10,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "InvalidSignatureError: JWT token signature could not be verified for user session - possible token tampering detected"
+      },
+      {
+        "level": "ERROR",
+        "message": "RateLimitExceeded: too many login attempts from IP 210.0.120.51 - blocked for 22 minutes"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "auth_errors",
+      "root_cause_keywords": [
+        "signature",
+        "tampering",
+        "rate limit"
+      ]
+    }
+  },
+  {
+    "id": "triage-171",
+    "name": "JVM heap exhausted during batch job — variant 3",
+    "source": "job-runner",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "CRITICAL",
+        "message": "OutOfMemoryError: JVM cannot allocate additional heap - heap max 2048mb reached during nightly batch job"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "memory_error",
+      "root_cause_keywords": [
+        "heap",
+        "out of memory",
+        "java"
+      ]
+    }
+  },
+  {
+    "id": "triage-172",
+    "name": "Card declined and insufficient funds errors — variant 3",
+    "source": "transaction-api",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CardDeclinedError: issuer rejected the card authorization - do_not_honor response from issuing bank"
+      },
+      {
+        "level": "ERROR",
+        "message": "InsufficientFundsException: insufficient_funds - payment processing failed for order 88252"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "payment_failed",
+      "root_cause_keywords": [
+        "card declined",
+        "insufficient funds",
+        "payment"
+      ]
+    }
+  },
+  {
+    "id": "triage-173",
+    "name": "DB pool exhausted on orders service — variant 3",
+    "source": "order-service",
+    "environment": "prod",
+    "count": 8,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ConnectionPoolExhaustedError: connection pool has no free slots - orders-api requests queued for >45s"
+      },
+      {
+        "level": "ERROR",
+        "message": "ConnectionPoolExhaustedError: All 78 connections in use - connection capacity exhausted, requests failing"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "db_connection_pool_exhausted",
+      "root_cause_keywords": [
+        "connection pool",
+        "pool exhausted"
+      ]
+    }
+  },
+  {
+    "id": "triage-174",
+    "name": "Worker node OOM killed — variant 3",
+    "source": "jobs-platform",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "OOMKilled: Container worker-node-3f2a exceeded memory limit and was terminated by the node OOM killer"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "kubernetes_oom_kill",
+      "root_cause_keywords": [
+        "oom",
+        "memory limit",
+        "killed"
+      ]
+    }
+  },
+  {
+    "id": "triage-175",
+    "name": "Cache stampede on user profile key — variant 3",
+    "source": "profile-service",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CacheStampedeDetected: Cache miss storm on key 'user-profile' - 515 concurrent database lookups"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "cache_stampede",
+      "root_cause_keywords": [
+        "cache stampede",
+        "cache miss",
+        "simultaneous db queries"
+      ]
+    }
+  },
+  {
+    "id": "triage-176",
+    "name": "XSS payload blocked in comment field — variant 3",
+    "source": "waf-gateway",
+    "environment": "prod",
+    "count": 13,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "SecurityAlert: cross-site scripting pattern detected in comment field - sanitization applied"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "security_alerts",
+      "root_cause_keywords": [
+        "xss",
+        "payload",
+        "sanitization"
+      ]
+    }
+  },
+  {
+    "id": "triage-177",
+    "name": "Inventory service circuit breaker opened — variant 3",
+    "source": "service-router",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ServiceUnavailableError: inventory-service responded with HTTP 517 after 3 retries - circuit breaker transitioned to open"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "service_unavailable",
+      "root_cause_keywords": [
+        "service unavailable",
+        "503",
+        "circuit breaker"
+      ]
+    }
+  },
+  {
+    "id": "triage-178",
+    "name": "Elasticsearch shard failure on orders index — variant 3",
+    "source": "search-service",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ShardFailureException: primary search shard for index 'orders-v2' unavailable - search results degraded"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "elasticsearch_shard_failure",
+      "root_cause_keywords": [
+        "shard",
+        "elasticsearch",
+        "search"
+      ]
+    }
+  },
+  {
+    "id": "triage-179",
+    "name": "SMS queue backlog critical — variant 3",
+    "source": "delivery-worker",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "QueueDepthCritical: sms-queue has 45028 pending messages - consumer delay continues to increase"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "message_queue",
+      "root_cause_keywords": [
+        "queue",
+        "consumer lag",
+        "backlog"
+      ]
+    }
+  },
+  {
+    "id": "triage-180",
+    "name": "Data volume disk critical — variant 3",
+    "source": "cron-runner",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "CRITICAL",
+        "message": "DiskSpaceCritical: /data is 130% full - writes are at risk of failing"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "disk_space",
+      "root_cause_keywords": [
+        "disk space",
+        "disk full",
+        "write operations"
+      ]
+    }
+  },
+  {
+    "id": "triage-181",
+    "name": "DB pool exhausted during checkout — variant 4",
+    "source": "checkout-worker",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ConnectionPoolExhaustedError: All 27 connections in use - requests waiting beyond the configured timeout"
+      },
+      {
+        "level": "ERROR",
+        "message": "ConnectionPoolExhaustedError: connection pool has no free slots - pool exhausted, requests failing"
+      },
+      {
+        "level": "ERROR",
+        "message": "PaymentGatewayTimeout: payment provider exceeded the gateway response deadline - no DB connection available to log transaction"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "db_connection_pool_exhausted",
+      "root_cause_keywords": [
+        "connection pool",
+        "pool exhausted"
+      ]
+    }
+  },
+  {
+    "id": "triage-182",
+    "name": "Container OOM killed by Kubernetes — variant 4",
+    "source": "k8s-workloads",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "OOMKilled: Container api-server-7d9f crossed the container memory ceiling and was terminated by the node OOM killer"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "kubernetes_oom_kill",
+      "root_cause_keywords": [
+        "oom",
+        "memory limit",
+        "killed"
+      ]
+    }
+  },
+  {
+    "id": "triage-183",
+    "name": "Expected JWT expiry noise — variant 4",
+    "source": "session-api",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "TokenExpiredError: session token is past its expiry at 30:36:22 - interactive login required again"
+      },
+      {
+        "level": "WARN",
+        "message": "TokenExpiredError: session token is past its expiry at 37:44:40 - user forced to re-login"
+      }
+    ],
+    "expected": {
+      "severity": "low",
+      "disposition": "NO_ACTION",
+      "runbook_id": "token_expired_noise",
+      "root_cause_keywords": [
+        "token expiry",
+        "jwt expired",
+        "session churn"
+      ]
+    }
+  },
+  {
+    "id": "triage-184",
+    "name": "Malformed CSV import rows — variant 4",
+    "source": "bulk-importer",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CSVParseError: invalid record shape at line 409 - field count does not match the CSV header"
+      },
+      {
+        "level": "ERROR",
+        "message": "CSVParseError: invalid record shape at line 437 - unexpected column count"
+      }
+    ],
+    "expected": {
+      "severity": "low",
+      "disposition": "OBSERVE",
+      "runbook_id": "csv_parse_error",
+      "root_cause_keywords": [
+        "csv",
+        "malformed row",
+        "column count"
+      ]
+    }
+  },
+  {
+    "id": "triage-185",
+    "name": "Feature flag service timeout — variant 4",
+    "source": "config-flags",
+    "environment": "prod",
+    "count": 7,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "FeatureFlagTimeout: Failed to evaluate flag 'checkout-v2' - defaulting to off, flag backend could not be contacted"
+      },
+      {
+        "level": "ERROR",
+        "message": "FeatureFlagTimeout: Failed to evaluate flag 'new-pricing-engine' - defaulting to off, service unreachable"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "feature_flag_timeout",
+      "root_cause_keywords": [
+        "feature flag",
+        "flag service",
+        "service unreachable"
+      ]
+    }
+  },
+  {
+    "id": "triage-186",
+    "name": "Session store unavailable — variant 4",
+    "source": "session-api",
+    "environment": "prod",
+    "count": 2,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "SessionStoreError: session persistence backend is unavailable - falling back to stateless mode"
+      },
+      {
+        "level": "ERROR",
+        "message": "InvalidSignatureError: JWT token signature could not be verified - session store unavailable, token cannot be re-validated"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "session_store",
+      "root_cause_keywords": [
+        "session store",
+        "redis",
+        "stateless"
+      ]
+    }
+  },
+  {
+    "id": "triage-187",
+    "name": "Brute force login attack — variant 4",
+    "source": "waf-gateway",
+    "environment": "prod",
+    "count": 11,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "BruteForceDetected: 334 failed attempts on /api/login in 60s"
+      },
+      {
+        "level": "ERROR",
+        "message": "SecurityAlert: SQL injection pattern detected in request - query blocked and IP flagged"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "security_alerts",
+      "root_cause_keywords": [
+        "brute force",
+        "attack",
+        "failed attempts"
+      ]
+    }
+  },
+  {
+    "id": "triage-188",
+    "name": "Payment gateway timeout — variant 4",
+    "source": "cart-api",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "PaymentGatewayTimeout: payment provider exceeded the gateway response deadline - transaction aborted"
+      },
+      {
+        "level": "ERROR",
+        "message": "PaymentGatewayTimeout: gateway vendor did not respond within 15s - duplicate retries suppressed"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "payment_gateway",
+      "root_cause_keywords": [
+        "payment gateway",
+        "stripe",
+        "timeout"
+      ]
+    }
+  },
+  {
+    "id": "triage-189",
+    "name": "Input validation failures — variant 4",
+    "source": "profile-api",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "ValidationError: Field 'email' failed input contract validation - request payload refused"
+      },
+      {
+        "level": "WARN",
+        "message": "ValidationError: Field 'phone_number' failed input contract validation - data rejected"
+      }
+    ],
+    "expected": {
+      "severity": "low",
+      "disposition": "OBSERVE",
+      "runbook_id": "data_validation",
+      "root_cause_keywords": [
+        "validation",
+        "schema",
+        "data rejected"
+      ]
+    }
+  },
+  {
+    "id": "triage-190",
+    "name": "Object storage upload failures — variant 4",
+    "source": "media-api",
+    "environment": "prod",
+    "count": 10,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "FileUploadError: object persistence failed for .pdf to object storage - S3 returned 535"
+      },
+      {
+        "level": "ERROR",
+        "message": "FileUploadError: Failed to write .csv to object storage - S3 returned 507"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "file_upload",
+      "root_cause_keywords": [
+        "s3",
+        "object storage",
+        "upload"
+      ]
+    }
+  },
+  {
+    "id": "triage-191",
+    "name": "Database disk almost full — variant 4",
+    "source": "cron-runner",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "CRITICAL",
+        "message": "DiskSpaceCritical: /var/lib/postgresql is 105% full - writes are at risk of failing"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "disk_space",
+      "root_cause_keywords": [
+        "disk space",
+        "disk full",
+        "write operations"
+      ]
+    }
+  },
+  {
+    "id": "triage-192",
+    "name": "Cache stampede overload — variant 4",
+    "source": "cache-service",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CacheStampedeDetected: Cache miss storm on key 'product-catalog' - 334 concurrent database lookups"
+      },
+      {
+        "level": "ERROR",
+        "message": "DatabaseConnectionError: database connection attempt timed out to db-analytics-3:5453"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "cache_stampede",
+      "root_cause_keywords": [
+        "cache stampede",
+        "cache miss",
+        "simultaneous db queries"
+      ]
+    }
+  },
+  {
+    "id": "triage-193",
+    "name": "WebSocket instability — variant 4",
+    "source": "realtime-gateway",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "WebSocketError: Connection dropped for user 12909 - reason: ping timeout"
+      },
+      {
+        "level": "WARN",
+        "message": "WebSocketError: socket disconnected unexpectedly for user 23916 - reason: transport close"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "OBSERVE",
+      "runbook_id": "websocket_connection_dropped",
+      "root_cause_keywords": [
+        "websocket",
+        "connection dropped",
+        "ping timeout"
+      ]
+    }
+  },
+  {
+    "id": "triage-194",
+    "name": "External API schema changed — variant 4",
+    "source": "integration-api",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "SchemaMismatchError: Salesforce API response contract no longer matches - expected field missing in response"
+      },
+      {
+        "level": "ERROR",
+        "message": "SchemaMismatchError: HubSpot API response shape changed - expected field missing in response"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "api_schema_mismatch",
+      "root_cause_keywords": [
+        "schema",
+        "api response",
+        "expected field"
+      ]
+    }
+  },
+  {
+    "id": "triage-195",
+    "name": "Downstream service unavailable — variant 4",
+    "source": "traffic-gateway",
+    "environment": "prod",
+    "count": 9,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ServiceUnavailableError: recommendation-engine responded with HTTP 538 after 3 retries - circuit breaker transitioned to open"
+      },
+      {
+        "level": "ERROR",
+        "message": "ServiceUnavailableError: search-service returned 510 after 3 retries - circuit breaker transitioned to open"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "service_unavailable",
+      "root_cause_keywords": [
+        "service unavailable",
+        "503",
+        "circuit breaker"
+      ]
+    }
+  },
+  {
+    "id": "triage-196",
+    "name": "Message queue backlog — variant 4",
+    "source": "delivery-worker",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "QueueDepthCritical: email-queue has 88007 pending messages - consumer delay continues to increase"
+      },
+      {
+        "level": "ERROR",
+        "message": "QueueDepthCritical: webhook-queue has 91014 pending messages - consumer lag growing"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "message_queue",
+      "root_cause_keywords": [
+        "queue",
+        "consumer lag",
+        "backlog"
+      ]
+    }
+  },
+  {
+    "id": "triage-197",
+    "name": "Elasticsearch primary shard unavailable — variant 4",
+    "source": "query-api",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "ShardFailureException: primary search shard for index 'products-v3' unavailable - search results degraded"
+      },
+      {
+        "level": "ERROR",
+        "message": "SearchTimeout: product search exceeded 5s timeout while primary search shard unavailable"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "elasticsearch_shard_failure",
+      "root_cause_keywords": [
+        "shard",
+        "elasticsearch",
+        "search"
+      ]
+    }
+  },
+  {
+    "id": "triage-198",
+    "name": "CDN cannot reach origin — variant 4",
+    "source": "asset-gateway",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "CDNOriginError: Origin pull failed for /static/js/main.chunk.js - 523 from origin, serving stale cache"
+      },
+      {
+        "level": "ERROR",
+        "message": "CDNOriginError: edge fetch from origin failed for /static/css/app.css - 530 from origin, serving stale cache"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "cdn_origin_pull_failed",
+      "root_cause_keywords": [
+        "cdn",
+        "origin",
+        "stale cache"
+      ]
+    }
+  },
+  {
+    "id": "triage-199",
+    "name": "gRPC deadline exceeded — variant 4",
+    "source": "fulfillment-api",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "DeadlineExceeded: gRPC call to inventory-grpc timed out after 5000ms - context cancelled by client"
+      },
+      {
+        "level": "ERROR",
+        "message": "DeadlineExceeded: gRPC call to shipping-grpc timed out after 5000ms - context cancelled by client"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "grpc_deadline_exceeded",
+      "root_cause_keywords": [
+        "grpc",
+        "deadline exceeded",
+        "timeout"
+      ]
+    }
+  },
+  {
+    "id": "triage-200",
+    "name": "Database deadlock — variant 4",
+    "source": "orders-worker",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "DeadlockException: database detected a transactional deadlock on table 'orders' - rolled back"
+      },
+      {
+        "level": "ERROR",
+        "message": "DeadlockException: Transaction deadlock detected on table 'payments' - rolled back"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "db_deadlock",
+      "root_cause_keywords": [
+        "deadlock",
+        "transaction",
+        "rolled back"
+      ]
+    }
+  },
+  {
+    "id": "triage-201",
+    "name": "Database replication lag — variant 4",
+    "source": "read-replica-client",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "ReplicationLagWarning: read replica is significantly behind the writer - read consistency degraded"
+      },
+      {
+        "level": "WARN",
+        "message": "ReplicationLagWarning: read replica is significantly behind the writer - read consistency degraded"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "OBSERVE",
+      "runbook_id": "db_replication_lag",
+      "root_cause_keywords": [
+        "replication lag",
+        "replica",
+        "read consistency"
+      ]
+    }
+  },
+  {
+    "id": "triage-202",
+    "name": "Duplicate payment request blocked — variant 4",
+    "source": "billing-api",
+    "environment": "prod",
+    "count": 3,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "IdempotencyViolation: Duplicate payment request detected - second charge blocked"
+      },
+      {
+        "level": "ERROR",
+        "message": "IdempotencyViolation: Duplicate request detected - idempotency key replayed"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "idempotency_violation",
+      "root_cause_keywords": [
+        "idempotency",
+        "duplicate payment",
+        "duplicate request"
+      ]
+    }
+  },
+  {
+    "id": "triage-203",
+    "name": "Fraud detection alert — variant 4",
+    "source": "risk-api",
+    "environment": "prod",
+    "count": 5,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "FraudDetectionAlert: Transaction flagged by risk engine - risk score crossed the configured threshold"
+      },
+      {
+        "level": "ERROR",
+        "message": "FraudDetectionAlert: Transaction flagged by risk engine - score exceeded threshold"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "payment_fraud",
+      "root_cause_keywords": [
+        "fraud",
+        "risk engine",
+        "score"
+      ]
+    }
+  },
+  {
+    "id": "triage-204",
+    "name": "Uploaded temp file missing — variant 4",
+    "source": "upload-processor",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "FileNotFoundError: temporary upload file is missing at /tmp/upload_3842 - no such file or directory"
+      },
+      {
+        "level": "WARN",
+        "message": "FileNotFoundError: temporary upload file is missing at /tmp/upload_4911 - no such file or directory"
+      }
+    ],
+    "expected": {
+      "severity": "low",
+      "disposition": "OBSERVE",
+      "runbook_id": "file_not_found",
+      "root_cause_keywords": [
+        "file not found",
+        "tmp",
+        "upload"
+      ]
+    }
+  },
+  {
+    "id": "triage-205",
+    "name": "Redis cache connection failures — variant 4",
+    "source": "cache-adapter",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "Redis connection failed: connection refused at cache-primary:6414"
+      },
+      {
+        "level": "ERROR",
+        "message": "Redis timeout while reading key user-permissions"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "OBSERVE",
+      "runbook_id": "redis_connection",
+      "root_cause_keywords": [
+        "redis",
+        "connection",
+        "timeout"
+      ]
+    }
+  },
+  {
+    "id": "triage-206",
+    "name": "Memory pressure before OOM — variant 4",
+    "source": "billing-service",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "WARN",
+        "message": "MemoryPressureWarning: Heap at 90% - GC pause times exceeding 500ms"
+      },
+      {
+        "level": "WARN",
+        "message": "MemoryPressureWarning: heap utilization is above the warning threshold - GC frequency increasing"
+      }
+    ],
+    "expected": {
+      "severity": "medium",
+      "disposition": "OBSERVE",
+      "runbook_id": "memory_pressure",
+      "root_cause_keywords": [
+        "memory pressure",
+        "heap",
+        "gc"
+      ]
+    }
+  },
+  {
+    "id": "triage-207",
+    "name": "Stack overflow runtime failure — variant 4",
+    "source": "rules-engine",
+    "environment": "prod",
+    "count": 1,
+    "logs": [
+      {
+        "level": "CRITICAL",
+        "message": "StackOverflowError: recursive call depth limit reached in RecursiveResolver - possible circular reference"
+      }
+    ],
+    "expected": {
+      "severity": "critical",
+      "disposition": "ESCALATE",
+      "runbook_id": "stack_overflow",
+      "root_cause_keywords": [
+        "stack overflow",
+        "maximum call depth",
+        "circular reference"
+      ]
+    }
+  },
+  {
+    "id": "triage-208",
+    "name": "Database connection timeout — variant 4",
+    "source": "checkout-worker",
+    "environment": "prod",
+    "count": 4,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "Database connection timeout: DatabaseConnectionError: database connection attempt timed out to db-primary-1:5453 - could not connect to database"
+      },
+      {
+        "level": "ERROR",
+        "message": "Database connection timeout: DatabaseConnectionError: database connection attempt timed out to db-replica-2:5460 - could not connect to database"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_ONCALL",
+      "runbook_id": "db_connection_timeout",
+      "root_cause_keywords": [
+        "database",
+        "connection timeout",
+        "db"
+      ]
+    }
+  },
+  {
+    "id": "triage-209",
+    "name": "Null pointer exception in order processing — variant 4",
+    "source": "orders-worker",
+    "environment": "prod",
+    "count": 6,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "NullPointerException: unexpected null reference in OrderProcessor.calculateTotal() - request returned 528"
+      },
+      {
+        "level": "ERROR",
+        "message": "NullPointerException: null object dereference propagated to global handler"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "application_exceptions",
+      "root_cause_keywords": [
+        "null reference",
+        "exception",
+        "500"
+      ]
+    }
+  },
+  {
+    "id": "triage-210",
+    "name": "JWT tampering and login rate limit hit — variant 4",
+    "source": "session-api",
+    "environment": "prod",
+    "count": 10,
+    "logs": [
+      {
+        "level": "ERROR",
+        "message": "InvalidSignatureError: JWT token signature could not be verified for user session - possible token tampering detected"
+      },
+      {
+        "level": "ERROR",
+        "message": "RateLimitExceeded: too many login attempts from IP 210.0.120.51 - blocked for 22 minutes"
+      }
+    ],
+    "expected": {
+      "severity": "high",
+      "disposition": "NEEDS_DEV",
+      "runbook_id": "auth_errors",
+      "root_cause_keywords": [
+        "signature",
+        "tampering",
+        "rate limit"
+      ]
     }
   }
 ]
